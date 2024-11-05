@@ -4,13 +4,13 @@
 CXX = g++
 
 # Compiler flags
-CXXFLAGS = -Wall -Wextra -std=c++17 -O3 -fopenmp
+CXXFLAGS = -Wall -Wextra -std=c++17 -O3 -fopenmp -I.
 
 # Target executable
 TARGET = raytracer
 
 # Source files
-SRCS = main.cpp raytracer.cpp
+SRCS = main.cpp raytracer.cpp parser.cpp
 
 # Object files
 OBJS = $(SRCS:.cpp=.o)

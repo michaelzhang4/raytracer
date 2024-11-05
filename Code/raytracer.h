@@ -4,8 +4,12 @@
 #include <string>
 #include <vector>
 #include <cmath>
-#include <iostream>
+#include <stdexcept>
+#include <memory>
 
+#include "parser.h"
+
+// Define M_PI if not defined
 #ifndef M_PI
 #define M_PI 3.14159265358979323846
 #endif
@@ -13,88 +17,97 @@
 // RGB Colours
 struct Colour {
     int r, g, b;
-    Colour(int red = 0, int green = 0, int blue = 0) : r(red), g(green), b(blue) {
-    }
+    Colour(int red = 0, int green = 0, int blue = 0) : r(red), g(green), b(blue) {}
 };
 
 // 3D vector coordinates
 struct Vec3 {
     float x, y, z;
-
-    Vec3 operator+(const Vec3& other) const {
-        return {x + other.x, y + other.y, z + other.z};
-    }
-    Vec3 operator-(const Vec3& other) const {
-        return {x - other.x, y - other.y, z - other.z};
-    }
-    Vec3 operator*(float scalar) const {
-        return {x * scalar, y * scalar, z * scalar};
-    }
-    Vec3 cross(const Vec3& other) const {
-        return {y * other.z - z * other.y, z * other.x - x * other.z, x * other.y - y * other.x};
-    }
-    Vec3 normalize() const {
-        float length = std::sqrt(x * x + y * y + z * z);
-        return {x / length, y / length, z / length};
-    }
-    float dot(const Vec3& other) const {
-        return x * other.x + y * other.y + z * other.z;
-    }
+    // Overloading for operators
+    Vec3 operator+(const Vec3& other) const;
+    Vec3 operator-(const Vec3& other) const;
+    Vec3 operator*(float scalar) const;
+    Vec3 cross(const Vec3& other) const;
+    Vec3 normalize() const;
+    float dot(const Vec3& other) const;
 };
 
-
-// Camera class with basic transformations
+// Camera class
 class Camera {
 public:
-    Vec3 position;  // Camera position in world space
-    Vec3 lookAt;    // Target point the camera is looking at
-    Vec3 up;        // Up vector for the camera orientation
-    float fov;      // Field of view in degrees
+    Vec3 position;
+    Vec3 lookAt;
+    Vec3 upVector;
+    int width;
+    int height;
+    float fov;
+    float exposure;
     float aspectRatio;
+    // Default constructor
+    Camera() 
+        : position({0.0f, 0.0f, 0.0f}), lookAt({0.0f, 0.0f, -1.0f}), upVector({0.0f, 1.0f, 0.0f}),
+          width(800), height(600), fov(90.0f), exposure(1.0f), aspectRatio(4.0f / 3.0f) {}
 
-    Camera(const Vec3& pos, const Vec3& look, const Vec3& upDir, float fieldOfView, float aspect)
-        : position(pos), lookAt(look), up(upDir), fov(fieldOfView), aspectRatio(aspect) {}
-
-    // Generate ray direction for a given pixel coordinate
-    Vec3 getRayDirection(int pixelX, int pixelY, int imageWidth, int imageHeight) const {
-        // FOV scale based on how wide the view is (wider means more spread out)
-        float scale = std::tan(fov * 0.5 * M_PI / 180);
-        float imageAspectRatio = static_cast<float>(imageWidth) / imageHeight;
-
-        // Camera basis vectors
-        Vec3 forward = (lookAt - position).normalize();       // Forward direction
-        Vec3 right = forward.cross(up).normalize();           // Right direction
-        Vec3 cameraUp = right.cross(forward);                 // Orthogonal up direction
-
-        // Pixel values between [-1,1]
-        float ndcX = (2 * (pixelX + 0.5) / imageWidth - 1) * imageAspectRatio * scale;
-        float ndcY = (1 - 2 * (pixelY + 0.5) / imageHeight) * scale;
-
-        // Transform NDC coordinates to world space
-        Vec3 rayDir = (forward + right * ndcX + cameraUp * ndcY).normalize();
-        return rayDir;
-    }
+    // Parameterised constructor
+    Camera(const Vec3& pos, const Vec3& look, const Vec3& upVec, int w, int h, float fieldOfView, float expos, float aspect);
+    Vec3 getRayDirection(int pixelX, int pixelY) const;
+    void printCameraSpecs();
 };
 
-class Sphere {
+// Abstract Shape class
+class Shape {
+public:
+    virtual ~Shape() = default;  // Virtual destructor for polymorphic deletion
+    virtual bool intersect(const Vec3& rayOrigin, const Vec3& rayDir) const = 0;  // Pure virtual method
+    virtual void printInfo() const = 0;
+};
+
+// Sphere class
+class Sphere : public Shape {
 public:
     Vec3 center;
     float radius;
-    Sphere(Vec3 cPos, float r) : center(cPos), radius(r) {}
+    Sphere(const Vec3& centerPos, float rad);
+    bool intersect(const Vec3& rayOrigin, const Vec3& rayDir) const override;
+    void printInfo() const override;
+};
 
-    bool intersectSphere(const Vec3& rayOrigin, const Vec3& rayDir) {
-        Vec3 oc = rayOrigin - center;
-        float a = rayDir.dot(rayDir);
-        float b = 2.0f * oc.dot(rayDir);
-        float c = oc.dot(oc) - radius * radius;
-        float discriminant = b * b - 4 * a * c;
-    return (discriminant > 0);
-}
+// Cylinder class
+class Cylinder : public Shape {
+public:
+    Vec3 center;
+    Vec3 axis;
+    float radius;
+    float height;
+    Cylinder(const Vec3& centerPos, const Vec3& ax, float rad, float h);
+    bool intersect(const Vec3& rayOrigin, const Vec3& rayDir) const override;
+    void printInfo() const override;
+};
+
+// Triangle class
+class Triangle : public Shape {
+public:
+    Vec3 v0, v1, v2;
+    Triangle(const Vec3& vertex0, const Vec3& vertex1, const Vec3& vertex2);
+    bool intersect(const Vec3& rayOrigin, const Vec3& rayDir) const override;
+    void printInfo() const override;
 };
 
 // Function declarations
 Colour calculateColour(const Vec3& rayDirection);
 void renderScene(std::vector<Colour>& pixels, int width, int height, const Camera& camera);
 void writePPM(const std::string &filename, const std::vector<Colour> &pixels, int width, int height);
+
+// Scene class
+class Scene {
+public:
+    Scene(const json& jsonData);
+    void renderScene(std::vector<Colour>& pixels);
+    void printSceneInfo();
+private:
+    Camera camera;
+    Colour backgroundColour;
+    std::vector<std::shared_ptr<Shape>> shapes;
+};
 
 #endif // RAYTRACER_H
