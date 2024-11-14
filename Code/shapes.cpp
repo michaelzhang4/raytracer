@@ -46,49 +46,71 @@ Cylinder::Cylinder(const Vec3& centerPos, const Vec3& ax, float rad, float h, co
     : Shape(mat), center(centerPos), axis(ax.normalise()), radius(rad), height(h) {}
 
 Vec3 Cylinder::getNormal(const Vec3& hitPoint) const {
-    Vec3 projection = axis * ((hitPoint - center).dot(axis));
-    return ((hitPoint - center) - projection).normalise();
+    Vec3 toHit = hitPoint - center;
+    float heightAtP = toHit.dot(axis); 
+
+    if (std::abs(heightAtP) < EPSILON) {
+        return -axis; // Bottom cap
+    }
+    
+    if (std::abs(heightAtP - height) < EPSILON) {
+        return axis; // Top cap
+    }
+
+    // Surface normal
+    Vec3 projection = axis * heightAtP;
+    return (toHit - projection).normalise();
 }
 
 bool Cylinder::intersect(const Vec3& rayOrigin, const Vec3& rayDir, float& t) const {
     Vec3 oc = rayOrigin - center;
-    float dDotA = rayDir.dot(axis);
-    float ocDotA = oc.dot(axis);
+    Vec3 axisNorm = axis.normalise();
 
-    Vec3 dPerp = rayDir - axis * dDotA;
-    Vec3 ocPerp = oc - axis * ocDotA;
+    // Decompose ray into parallel and perpendicular components relative to cylinder axis
+    Vec3 rayDirPerpendicular = rayDir - axisNorm * rayDir.dot(axisNorm);
+    Vec3 ocPerpendicular = oc - axisNorm * oc.dot(axisNorm);
 
-    float a = dPerp.dot(dPerp);
-    float b = 2.0f * ocPerp.dot(dPerp);
-    float c = ocPerp.dot(ocPerp) - radius * radius;
+    float a = rayDirPerpendicular.dot(rayDirPerpendicular);
+    float b = 2.0f * ocPerpendicular.dot(rayDirPerpendicular);
+    float c = ocPerpendicular.dot(ocPerpendicular) - radius * radius;
 
     float discriminant = b * b - 4.0f * a * c;
-
-    if (discriminant < 0) {
-        return false;
-    }
+    if (discriminant < 0) return false;
 
     float sqrtDiscriminant = std::sqrt(discriminant);
     float t1 = (-b - sqrtDiscriminant) / (2.0f * a);
     float t2 = (-b + sqrtDiscriminant) / (2.0f * a);
 
-    if (t1 > EPSILON && (t2 < EPSILON || t1 < t2)) {
-        t = t1;
-    } else if (t2 > EPSILON) {
-        t = t2;
-    } else {
-        return false;
+    if (t1 > t2) std::swap(t1, t2);  // Ensure t1 is the smaller value
+
+    // Define bounds of the cylinder along the axis
+    Vec3 bottomCap = center - axisNorm * (height * 0.5f);
+    Vec3 topCap = center + axisNorm * (height * 0.5f);
+
+    auto isWithinHeight = [&](const Vec3& point) -> bool {
+        float projection = axisNorm.dot(point - center);
+        return projection >= -1.0f * height && projection <= 1.0f * height;
+    };
+
+    if (t1 > EPSILON) {
+        Vec3 hitPoint = rayOrigin + rayDir * t1;
+        if (isWithinHeight(hitPoint)) {
+            t = t1;
+            return true;
+        }
     }
 
-    Vec3 p = rayOrigin + rayDir * t;
-    float heightAtP = (p - center).dot(axis);
-
-    if (heightAtP < 0 || heightAtP > height) {
-        return false;
+    if (t2 > EPSILON) {
+        Vec3 hitPoint = rayOrigin + rayDir * t2;
+        if (isWithinHeight(hitPoint)) {
+            t = t2;
+            return true;
+        }
     }
 
-    return true;
+    return false;
 }
+
 
 void Cylinder::printInfo() const {
     std::cout << "Cylinder Info:" << std::endl;
@@ -104,6 +126,7 @@ Triangle::Triangle(const Vec3& vertex0, const Vec3& vertex1, const Vec3& vertex2
     : Shape(mat), v0(vertex0), v1(vertex1), v2(vertex2) {}
 
 Vec3 Triangle::getNormal(const Vec3& hitPoint) const {
+    (void)hitPoint; // Explicitly ignore the unused parameter
     Vec3 edge1 = v1 - v0;
     Vec3 edge2 = v2 - v0;
     return edge1.cross(edge2).normalise();

@@ -26,7 +26,6 @@ clean:
 ifeq ($(OS),Windows_NT)
 	# Use cmd /c to execute del in Windows shell
 	cmd /c del /f /q $(TARGET).exe $(OBJS)
-	cmd /c del /f /q *.ppm
 else
 	# Linux/macOS command
 	rm -f $(TARGET) $(OBJS)

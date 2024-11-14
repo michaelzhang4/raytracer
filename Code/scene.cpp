@@ -41,7 +41,14 @@ Scene::Scene(const json& jsonData) {
     if (jsonScene.contains("shapes") && jsonScene["shapes"].is_array()) {
         for (const auto& shapeData : jsonScene["shapes"]) {
             std::string type = shapeData["type"];
-            auto material = parseMaterial(shapeData.at("material"));
+            // Check if "material" key exists, otherwise use a default material
+            Material material;
+            if (shapeData.contains("material")) {
+                material = parseMaterial(shapeData.at("material"));
+            } else {
+                std::cout << "Material not found for shape, using default material.\n";
+                material = Material(); // Or set to some default material values
+            }
 
             if (type == "sphere") {
                 Vec3 center = getVec3FromJson(shapeData, "center", {0, 0, 0});

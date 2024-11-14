@@ -17,7 +17,7 @@ int main() {
 
     // // Render the scene
     scene.renderScene(pixels);
-    
+
     // // Save the result to a PPM file
     std::string filename = "output.ppm";
     writePPM(filename, pixels, width, height);
