@@ -5,10 +5,10 @@ CXX = g++
 CXXFLAGS = -Wall -Wextra -std=c++17 -O3 -fopenmp -I.
 
 # Target executable
-TARGET = raytracer
+TARGET = main
 
 # Source files
-SRCS = main.cpp camera.cpp scene.cpp parser.cpp shapes.cpp helpers.cpp utilities.cpp material.cpp
+SRCS = main.cpp camera.cpp scene.cpp parser.cpp shapes.cpp helpers.cpp utilities.cpp material.cpp raytracer.cpp
 
 # Object files
 OBJS = $(SRCS:.cpp=.o)
@@ -26,6 +26,7 @@ clean:
 ifeq ($(OS),Windows_NT)
 	# Use cmd /c to execute del in Windows shell
 	cmd /c del /f /q $(TARGET).exe $(OBJS)
+	cmd /c del /f /q *.ppm
 else
 	# Linux/macOS command
 	rm -f $(TARGET) $(OBJS)

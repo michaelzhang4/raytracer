@@ -1,5 +1,5 @@
 #include "scene.h"
-#include "helpers.h"
+
 
 Scene::Scene(const json& jsonData) {
     std::string rendermodeStr = jsonData.contains("rendermode") ? jsonData["rendermode"].get<std::string>() : "binary";
@@ -66,47 +66,27 @@ Scene::Scene(const json& jsonData) {
 }
 
 void Scene::renderScene(std::vector<Colour>& pixels) {
-    pixels.resize(camera.width * camera.height);
-    Vec3 lightDir = {1.0f, 1.0f, -1.0f};
-    lightDir = lightDir.normalise();
-    #pragma omp parallel for
-    for (int y = 0; y < camera.height; ++y) {
-        for (int x = 0; x < camera.width; ++x) {
-            Vec3 rayDir = camera.getRayDirection(x, y).normalise();
-            Vec3 rayOrigin = camera.position;
 
-            Colour pixelColour = backgroundColour;
-            float nearestT = std::numeric_limits<float>::max(); // Nearest intersection distance
-            std::shared_ptr<Shape> hitObject = nullptr;
+    std::shared_ptr<RayTracer> rayTracer = std::make_shared<BinaryTracer>();
 
-            // Check intersection with all shapes
-            for (const auto& shape : shapes) {
-                float t = 0.0f;
-                if (shape->intersect(rayOrigin, rayDir, t)) {
-                    if (t < nearestT) {
-                        nearestT = t;
-                        hitObject = shape;
-                    }
-                }
-            }
-
-            // Calculate colour based on the render mode
-            if (hitObject) {
-                if (renderMode == RenderMode::BINARY) {
-                    pixelColour = Colour(255, 0, 0);  // Red for hit objects
-                } else if (renderMode == RenderMode::PHONG) {
-                    std::cout << "HIT" << std::endl;
-                    Vec3 hitPoint = rayOrigin + rayDir * nearestT;
-                    Vec3 normal = (hitPoint - dynamic_cast<Sphere*>(hitObject.get())->center).normalise();  // Example for sphere
-                    float intensity = std::max(0.0f, normal.dot(lightDir));
-                    int shade = static_cast<int>(intensity * 255);
-                    pixelColour = Colour(shade, shade, shade);  // Grayscale shading
-                }
-            }
-
-            pixels[y * camera.width + x] = pixelColour;
-        }
+    switch (renderMode) {
+        case RenderMode::BINARY:
+            rayTracer = std::make_shared<BinaryTracer>();
+            break;
+        case RenderMode::PHONG:
+            rayTracer = std::make_shared<PhongTracer>();
+            break;
+        // case RenderMode::PATH:
+        //     rayTracer = std::make_shared<PathTracer>();
+        //     break;
+        default:
+            std::cerr << "Unknown render mode. Defaulting to BinaryTracer" << std::endl;
+            rayTracer = std::make_shared<BinaryTracer>();
+            break;
     }
+
+    // Render using the selected ray tracer
+    rayTracer->renderScene(*this, pixels);
 }
 
 void Scene::printSceneInfo() {

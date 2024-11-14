@@ -9,6 +9,7 @@
 #include <string>
 #include <utility>
 #include <fstream>
+#include <limits>
 #include "utilities.h"
 
 #include "nlohmann/json.hpp"

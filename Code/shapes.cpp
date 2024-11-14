@@ -4,6 +4,10 @@
 Sphere::Sphere(const Vec3 &centerPos, float rad, const Material& mat)
     : Shape(mat), center(centerPos), radius(rad) {}
 
+Vec3 Sphere::getNormal(const Vec3& hitPoint) const {
+    return (hitPoint - center).normalise();
+}
+
 bool Sphere::intersect(const Vec3& rayOrigin, const Vec3& rayDir, float& t) const {
     Vec3 oc = rayOrigin - center;
     float a = rayDir.dot(rayDir);
@@ -40,6 +44,11 @@ void Sphere::printInfo() const {
 // Cylinder class definition
 Cylinder::Cylinder(const Vec3& centerPos, const Vec3& ax, float rad, float h, const Material& mat)
     : Shape(mat), center(centerPos), axis(ax.normalise()), radius(rad), height(h) {}
+
+Vec3 Cylinder::getNormal(const Vec3& hitPoint) const {
+    Vec3 projection = axis * ((hitPoint - center).dot(axis));
+    return ((hitPoint - center) - projection).normalise();
+}
 
 bool Cylinder::intersect(const Vec3& rayOrigin, const Vec3& rayDir, float& t) const {
     Vec3 oc = rayOrigin - center;
@@ -93,6 +102,12 @@ void Cylinder::printInfo() const {
 // Triangle class definition
 Triangle::Triangle(const Vec3& vertex0, const Vec3& vertex1, const Vec3& vertex2, const Material& mat)
     : Shape(mat), v0(vertex0), v1(vertex1), v2(vertex2) {}
+
+Vec3 Triangle::getNormal(const Vec3& hitPoint) const {
+    Vec3 edge1 = v1 - v0;
+    Vec3 edge2 = v2 - v0;
+    return edge1.cross(edge2).normalise();
+}
 
 bool Triangle::intersect(const Vec3& rayOrigin, const Vec3& rayDir, float& t) const {
     Vec3 edge1 = v1 - v0;

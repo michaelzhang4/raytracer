@@ -1,5 +1,5 @@
-#ifndef RAYTRACER_H
-#define RAYTRACER_H
+#ifndef HELPERS_H
+#define HELPERS_H
 
 #include "common.h"
 #include "material.h"

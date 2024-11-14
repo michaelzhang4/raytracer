@@ -12,6 +12,7 @@ public:
 
     virtual bool intersect(const Vec3& rayOrigin, const Vec3& rayDir, float& t) const = 0;
     virtual void printInfo() const = 0;
+    virtual Vec3 getNormal(const Vec3& hitPoint) const = 0;
 
 };
 
@@ -22,6 +23,7 @@ public:
     float radius;
 
     Sphere(const Vec3& centerPos, float rad, const Material& mat);
+    Vec3 getNormal(const Vec3& hitPoint) const override;
     bool intersect(const Vec3& rayOrigin, const Vec3& rayDir, float& t) const override;
     void printInfo() const override;
 };
@@ -34,6 +36,7 @@ public:
     float radius;
     float height;
     Cylinder(const Vec3& centerPos, const Vec3& ax, float rad, float h, const Material& mat);
+    Vec3 getNormal(const Vec3& hitPoint) const override;
     bool intersect(const Vec3& rayOrigin, const Vec3& rayDir, float& t) const override;
     void printInfo() const override;
 };
@@ -43,6 +46,7 @@ class Triangle : public Shape {
 public:
     Vec3 v0, v1, v2;
     Triangle(const Vec3& vertex0, const Vec3& vertex1, const Vec3& vertex2, const Material& mat);
+    Vec3 getNormal(const Vec3& hitPoint) const override;
     bool intersect(const Vec3& rayOrigin, const Vec3& rayDir, float& t) const override;
     void printInfo() const override;
 };
