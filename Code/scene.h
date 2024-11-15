@@ -21,7 +21,6 @@ public:
     const RenderMode& getRenderMode() const { return renderMode; }
     int getBounces() const { return nbounces; }
     float getExposure() const { return camera.exposure; }
-    const Colour& getAmbientLight() const { return ambientLight; }
 private:
     int nbounces;
     Camera camera;
@@ -29,7 +28,6 @@ private:
     std::vector<std::shared_ptr<Shape>> shapes;
     std::vector<Light> lights;
     RenderMode renderMode;
-    Colour ambientLight = {26, 26, 26};
 };
 
 #endif

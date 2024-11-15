@@ -4,7 +4,7 @@
 
 int main() {
     json jsonData;
-    parse("../TestSuite/scene.json", jsonData);
+    parse("../TestSuite/simple_phong.json", jsonData);
 
     Scene scene(jsonData);
 
