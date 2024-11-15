@@ -20,7 +20,7 @@ struct Material {
     // Parameterized constructor
     Material(float kd, float ks, int specularExponent, const Colour& diffuse, const Colour& specular, 
              bool reflective, float reflectivity, bool refractive, float refrIndex);
-
+    // Colour getDiffuseColor(Point2f uv) const;
     // Debugging utility
     void printMaterialInfo() const;
 };

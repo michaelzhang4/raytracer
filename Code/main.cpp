@@ -12,13 +12,13 @@ int main() {
 
     auto [width, height] = scene.sceneWidthHeight();
 
-    // // Prepare the pixel buffer
+    // Prepare the pixel buffer
     std::vector<Colour> pixels(width * height);
 
-    // // Render the scene
+    // Render the scene
     scene.renderScene(pixels);
 
-    // // Save the result to a PPM file
+    // Save the result to a PPM file
     std::string filename = "output.ppm";
     writePPM(filename, pixels, width, height);
 

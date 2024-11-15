@@ -8,7 +8,7 @@ CXXFLAGS = -Wall -Wextra -std=c++17 -O3 -fopenmp -I.
 TARGET = main
 
 # Source files
-SRCS = main.cpp camera.cpp scene.cpp parser.cpp shapes.cpp helpers.cpp utilities.cpp material.cpp raytracer.cpp
+SRCS = main.cpp camera.cpp scene.cpp parser.cpp shapes.cpp helpers.cpp utilities.cpp material.cpp raytracer.cpp ray.cpp
 
 # Object files
 OBJS = $(SRCS:.cpp=.o)

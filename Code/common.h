@@ -22,4 +22,5 @@ constexpr float EPSILON = 1e-8;
 #define M_PI 3.14159265358979323846
 #endif
 
+
 #endif // COMMON_H

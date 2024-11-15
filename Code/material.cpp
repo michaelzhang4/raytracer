@@ -13,6 +13,13 @@ Material::Material(float kd, float ks, int specExp, const Colour& diffuse, const
       specularColor(specular), isReflective(reflective), reflectivity(reflectivity),
       isRefractive(refractive), refractiveIndex(refractiveIndex) {}
 
+// Colour Material::getDiffuseColor(Point2f uv) const {
+//     if (texture) {
+//         return texture->sample(uv.x(), uv.y());
+//     }
+//     return diffuseColor;
+// }
+
 // Print material info (for debugging)
 void Material::printMaterialInfo() const {
     std::cout << "Material Info:" << std::endl;
