@@ -25,13 +25,8 @@ $(TARGET): $(OBJS)
 
 # Rule for building object files
 $(BUILD_DIR)/%.o: $(SRC_DIR)/%.cpp
-	mkdir -p $(BUILD_DIR)
 	$(CXX) $(CXXFLAGS) -c $< -o $@
 
 # Clean target to remove build files
 clean:
-ifeq ($(OS),Windows_NT)
-	cmd /c del /f /q $(BUILD_DIR)\*.o $(TARGET).exe
-else
 	rm -f $(BUILD_DIR)/*.o $(TARGET)
-endif

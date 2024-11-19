@@ -101,7 +101,6 @@ Colour Colour::operator/(float scalar) const {
     );
 }
 
-
 Ray::Ray(const Vec3& origin, const Vec3& direction)
     : origin(origin), direction(direction.normalise()) {}
 

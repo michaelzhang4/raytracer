@@ -24,7 +24,7 @@ public:
 class PhongTracer : public RayTracer {
 public:
     void renderScene(const Scene& scene, std::vector<Colour>& pixels) const override;
-    Colour traceRayRecursive(const Scene& scene, const Vec3& rayOrigin, const Vec3& rayDir, int bounce) const;
+    Colour traceRayRecursive(const Scene& scene, const Ray& ray, int bounce) const;
 };
 
 // // PathTracer for global illumination

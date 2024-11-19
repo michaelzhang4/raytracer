@@ -8,10 +8,10 @@ Vec3 Sphere::getNormal(const Vec3& hitPoint) const {
     return (hitPoint - center).normalise();
 }
 
-bool Sphere::intersect(const Vec3& rayOrigin, const Vec3& rayDir, Intersection& intersection) const {
-    Vec3 oc = rayOrigin - center;
-    float a = rayDir.dot(rayDir);
-    float b = 2.0f * oc.dot(rayDir);
+bool Sphere::intersect(const Ray& ray, Intersection& intersection) const {
+    Vec3 oc = ray.origin - center;
+    float a = ray.direction.dot(ray.direction);
+    float b = 2.0f * oc.dot(ray.direction);
     float c = oc.dot(oc) - radius * radius;
     float discriminant = b * b - 4 * a * c;
 
@@ -31,7 +31,7 @@ bool Sphere::intersect(const Vec3& rayOrigin, const Vec3& rayDir, Intersection& 
     // Populate the Intersection struct
     intersection.hit = true;
     intersection.t = t;
-    intersection.hitPoint = rayOrigin + rayDir * t;
+    intersection.hitPoint = ray.at(t);
     intersection.normal = getNormal(intersection.hitPoint);
     intersection.material = material;
 
@@ -49,23 +49,6 @@ void Sphere::printInfo() const {
 // Cylinder class definition
 Cylinder::Cylinder(const Vec3& centerPos, const Vec3& ax, float rad, float h, const Material& mat)
     : Shape(mat), center(centerPos), axis(ax.normalise()), radius(rad), height(h) {}
-
-// Vec3 Cylinder::getNormal(const Vec3& hitPoint) const {
-//     Vec3 toHit = hitPoint - center;
-//     float heightAtP = toHit.dot(axis); 
-
-//     if (std::abs(heightAtP + height) < EPSILON) {
-//         return -axis; // Bottom cap
-//     }
-    
-//     if (std::abs(heightAtP - height) < EPSILON) {
-//         return axis; // Top cap
-//     }
-
-//     // Surface normal
-//     Vec3 projection = axis * heightAtP;
-//     return (toHit - projection).normalise();
-// }
 
 Vec3 Cylinder::getNormal(const Vec3& point) const {
     Vec3 axisNorm = axis; // Assuming axis is normalized
@@ -87,13 +70,13 @@ Vec3 Cylinder::getNormal(const Vec3& point) const {
 }
 
 
-bool Cylinder::intersect(const Vec3& rayOrigin, const Vec3& rayDir, Intersection& intersection) const {
-    Vec3 oc = rayOrigin - center;
+bool Cylinder::intersect(const Ray& ray, Intersection& intersection) const {
+    Vec3 oc = ray.origin - center;
     Vec3 axisNorm = axis; // axis is already normalized in constructor
 
     // Quadratic coefficients for the side surface
-    float A = rayDir.dot(rayDir) - pow(rayDir.dot(axisNorm), 2);
-    float B = 2.0f * (rayDir.dot(oc) - rayDir.dot(axisNorm) * oc.dot(axisNorm));
+    float A = ray.direction.dot(ray.direction) - pow(ray.direction.dot(axisNorm), 2);
+    float B = 2.0f * (ray.direction.dot(oc) - ray.direction.dot(axisNorm) * oc.dot(axisNorm));
     float C = oc.dot(oc) - pow(oc.dot(axisNorm), 2) - radius * radius;
 
     float discriminant = B * B - 4.0f * A * C;
@@ -113,13 +96,13 @@ bool Cylinder::intersect(const Vec3& rayOrigin, const Vec3& rayDir, Intersection
         };
 
         if (t1 > EPSILON) {
-            Vec3 p1 = rayOrigin + rayDir * t1;
+            Vec3 p1 = ray.origin + ray.direction * t1;
             if (isWithinHeight(p1)) {
                 hits.emplace_back(t1, p1);
             }
         }
         if (t2 > EPSILON) {
-            Vec3 p2 = rayOrigin + rayDir * t2;
+            Vec3 p2 = ray.origin + ray.direction * t2;
             if (isWithinHeight(p2)) {
                 hits.emplace_back(t2, p2);
             }
@@ -127,14 +110,14 @@ bool Cylinder::intersect(const Vec3& rayOrigin, const Vec3& rayDir, Intersection
     }
 
     // Check for intersection with the end caps
-    float denom = rayDir.dot(axisNorm);
+    float denom = ray.direction.dot(axisNorm);
 
     if (std::abs(denom) > EPSILON) {
         // Bottom cap
         Vec3 capBottomCenter = center - axisNorm * height;
-        float t_cap_bottom = (capBottomCenter - rayOrigin).dot(axisNorm) / denom;
+        float t_cap_bottom = (capBottomCenter - ray.origin).dot(axisNorm) / denom;
         if (t_cap_bottom > EPSILON) {
-            Vec3 p_cap_bottom = rayOrigin + rayDir * t_cap_bottom;
+            Vec3 p_cap_bottom = ray.origin + ray.direction * t_cap_bottom;
             float len = (p_cap_bottom - center).length();
             if (len*len <= radius * radius) {
                 hits.emplace_back(t_cap_bottom, p_cap_bottom);
@@ -143,9 +126,9 @@ bool Cylinder::intersect(const Vec3& rayOrigin, const Vec3& rayDir, Intersection
 
         // Top cap
         Vec3 capTopCenter = center + axisNorm * height;
-        float t_cap_top = (capTopCenter - rayOrigin).dot(axisNorm) / denom;
+        float t_cap_top = (capTopCenter - ray.origin).dot(axisNorm) / denom;
         if (t_cap_top > EPSILON) {
-            Vec3 p_cap_top = rayOrigin + rayDir * t_cap_top;
+            Vec3 p_cap_top = ray.origin + ray.direction * t_cap_top;
             float len = (p_cap_top - capTopCenter).length();
             if ( len*len <= radius * radius) {
                 hits.emplace_back(t_cap_top, p_cap_top);
@@ -191,56 +174,6 @@ BoundingBox Cylinder::getBoundingBox() const {
     return BoundingBox(min, max);
 }
 
-// bool Cylinder::intersect(const Vec3& rayOrigin, const Vec3& rayDir, float& t) const {
-//     Vec3 oc = rayOrigin - center;
-//     Vec3 axisNorm = axis.normalise();
-
-//     // Decompose ray into parallel and perpendicular components relative to cylinder axis
-//     Vec3 rayDirPerpendicular = rayDir - axisNorm * rayDir.dot(axisNorm);
-//     Vec3 ocPerpendicular = oc - axisNorm * oc.dot(axisNorm);
-
-//     float a = rayDirPerpendicular.dot(rayDirPerpendicular);
-//     float b = 2.0f * ocPerpendicular.dot(rayDirPerpendicular);
-//     float c = ocPerpendicular.dot(ocPerpendicular) - radius * radius;
-
-//     float discriminant = b * b - 4.0f * a * c;
-//     if (discriminant < 0) return false;
-
-//     float sqrtDiscriminant = std::sqrt(discriminant);
-//     float t1 = (-b - sqrtDiscriminant) / (2.0f * a);
-//     float t2 = (-b + sqrtDiscriminant) / (2.0f * a);
-
-//     if (t1 > t2) std::swap(t1, t2);  // Ensure t1 is the smaller value
-
-//     // Define bounds of the cylinder along the axis
-//     Vec3 bottomCap = center - axisNorm * (height * 0.5f);
-//     Vec3 topCap = center + axisNorm * (height * 0.5f);
-
-//     auto isWithinHeight = [&](const Vec3& point) -> bool {
-//         float projection = axisNorm.dot(point - center);
-//         return projection >= -1.0f * height && projection <= 1.0f * height;
-//     };
-
-//     if (t1 > EPSILON) {
-//         Vec3 hitPoint = rayOrigin + rayDir * t1;
-//         if (isWithinHeight(hitPoint)) {
-//             t = t1;
-//             return true;
-//         }
-//     }
-
-//     if (t2 > EPSILON) {
-//         Vec3 hitPoint = rayOrigin + rayDir * t2;
-//         if (isWithinHeight(hitPoint)) {
-//             t = t2;
-//             return true;
-//         }
-//     }
-
-//     return false;
-// }
-
-
 void Cylinder::printInfo() const {
     std::cout << "Cylinder Info:" << std::endl;
     std::cout << "center (x,y,z): " << center.x << " " << center.y << " " << center.z << std::endl;
@@ -261,11 +194,11 @@ Vec3 Triangle::getNormal(const Vec3& hitPoint) const {
     return edge1.cross(edge2).normalise();
 }
 
-bool Triangle::intersect(const Vec3& rayOrigin, const Vec3& rayDir, Intersection& intersection) const {
+bool Triangle::intersect(const Ray& ray, Intersection& intersection) const {
     Vec3 edge1 = v1 - v0;
     Vec3 edge2 = v2 - v0;
 
-    Vec3 h = rayDir.cross(edge2);
+    Vec3 h = ray.direction.cross(edge2);
     float a = edge1.dot(h);
 
     if (std::abs(a) < EPSILON) {
@@ -273,7 +206,7 @@ bool Triangle::intersect(const Vec3& rayOrigin, const Vec3& rayDir, Intersection
     }
 
     float f = 1.0f / a;
-    Vec3 s = rayOrigin - v0;
+    Vec3 s = ray.origin - v0;
     float u = f * s.dot(h);
 
     if (u < 0.0f || u > 1.0f) {
@@ -281,7 +214,7 @@ bool Triangle::intersect(const Vec3& rayOrigin, const Vec3& rayDir, Intersection
     }
 
     Vec3 q = s.cross(edge1);
-    float v = f * rayDir.dot(q);
+    float v = f * ray.direction.dot(q);
 
     if (v < 0.0f || u + v > 1.0f) {
         return false;
@@ -292,7 +225,7 @@ bool Triangle::intersect(const Vec3& rayOrigin, const Vec3& rayDir, Intersection
     if (t > EPSILON) {
         intersection.hit = true;
         intersection.t = t;
-        intersection.hitPoint = rayOrigin + rayDir * t;
+        intersection.hitPoint = ray.origin + ray.direction * t;
         intersection.normal = getNormal(intersection.hitPoint);
         intersection.material = material;
         return true;

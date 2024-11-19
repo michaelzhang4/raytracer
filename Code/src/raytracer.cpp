@@ -15,7 +15,6 @@ void BinaryTracer::renderScene(const Scene& scene, std::vector<Colour>& pixels) 
     for (int y = 0; y < camera.height; ++y) {
         for (int x = 0; x < camera.width; ++x) {
             Ray ray(camera.position, camera.getRayDirection(x, y).normalise());
-
             Colour pixelColour = backgroundColour;
             float nearestT = std::numeric_limits<float>::max(); // Nearest intersection distance
             std::shared_ptr<Shape> hitObject = nullptr;
@@ -24,7 +23,7 @@ void BinaryTracer::renderScene(const Scene& scene, std::vector<Colour>& pixels) 
             for (const auto& shape : shapes) {
                 float t = 0.0f;
                 Intersection nearestIntersection;
-                if (shape->intersect(ray.origin, ray.direction, nearestIntersection)) {
+                if (shape->intersect(ray, nearestIntersection)) {
                     if (t < nearestT) {
                         nearestT = t;
                         hitObject = shape;
@@ -52,11 +51,10 @@ void PhongTracer::renderScene(const Scene& scene, std::vector<Colour>& pixels) c
     #pragma omp parallel for
     for (int y = 0; y < camera.height; ++y) {
         for (int x = 0; x < camera.width; ++x) {
-            Vec3 rayDir = camera.getRayDirection(x, y).normalise();
-            Vec3 rayOrigin = camera.position;
+            Ray cameraRay = Ray(camera.position, camera.getRayDirection(x, y));
 
             // Compute pixel colour using recursive ray tracing
-            Colour pixelColour = traceRayRecursive(scene, rayOrigin, rayDir, 0);
+            Colour pixelColour = traceRayRecursive(scene, cameraRay, 0);
 
             // Apply tone mapping to the final pixel before storage
             pixelColour = linearToneMap(pixelColour, exposure);
@@ -78,7 +76,7 @@ void PhongTracer::renderScene(const Scene& scene, std::vector<Colour>& pixels) c
 
 }
 
-Colour PhongTracer::traceRayRecursive(const Scene& scene, const Vec3& rayOrigin, const Vec3& rayDir, int bounce) const {
+Colour PhongTracer::traceRayRecursive(const Scene& scene, const Ray& ray, int bounce) const {
     const int bounceCount = scene.getBounces();
     const Colour& backgroundColour = scene.getBackgroundColour();
 
@@ -97,7 +95,7 @@ Colour PhongTracer::traceRayRecursive(const Scene& scene, const Vec3& rayOrigin,
     // Find nearest intersection
     for (const auto& shape : shapes) {
         Intersection tempIntersection;
-        if (shape->intersect(rayOrigin, rayDir, tempIntersection) && tempIntersection.t < nearestIntersection.t) {
+        if (shape->intersect(ray, tempIntersection) && tempIntersection.t < nearestIntersection.t) {
             nearestIntersection = tempIntersection;
         }
     }
@@ -127,7 +125,7 @@ Colour PhongTracer::traceRayRecursive(const Scene& scene, const Vec3& rayOrigin,
         // Check for occlusion
         for (const auto& shape : shapes) {
             Intersection shadowIntersection;
-            if (shape->intersect(shadowRay.origin, shadowRay.direction, shadowIntersection) && shadowIntersection.t > 0.0001f && shadowIntersection.t < lightDistance) {
+            if (shape->intersect(Ray(shadowRay.origin, shadowRay.direction), shadowIntersection) && shadowIntersection.t > 0.0001f && shadowIntersection.t < lightDistance) {
                 inShadow = true;
                 break;
             }
@@ -160,11 +158,11 @@ Colour PhongTracer::traceRayRecursive(const Scene& scene, const Vec3& rayOrigin,
     // Reflection
     if (material.isReflective) {
         Vec3 adjustedNormal = normal;
-        if (rayDir.dot(adjustedNormal) > 0.0f) {
+        if (ray.direction.dot(adjustedNormal) > 0.0f) {
             adjustedNormal = -normal;
         }
-        Vec3 reflectedDir = rayDir - adjustedNormal * 2.0f * rayDir.dot(adjustedNormal);
-        Colour reflectedColour = traceRayRecursive(scene, hitPoint + adjustedNormal * 0.0001f, reflectedDir, bounce + 1);
+        Vec3 reflectedDir = ray.direction - adjustedNormal * 2.0f * ray.direction.dot(adjustedNormal);
+        Colour reflectedColour = traceRayRecursive(scene, Ray(hitPoint + adjustedNormal * 0.0001f, reflectedDir), bounce + 1);
         colour = colour * (1.0f - material.reflectivity) + reflectedColour * material.reflectivity;
     }
 
@@ -174,19 +172,19 @@ Colour PhongTracer::traceRayRecursive(const Scene& scene, const Vec3& rayOrigin,
         Vec3 refractedDir;
         Vec3 n = normal;
 
-        if (rayDir.dot(normal) > 0.0f) {
+        if (ray.direction.dot(normal) > 0.0f) {
             std::swap(n1, n2);
             n = -normal;
         }
 
         float eta = n1 / n2;
-        float cosI = -n.dot(rayDir);
+        float cosI = -n.dot(ray.direction);
         float sinT2 = eta * eta * (1.0f - cosI * cosI);
 
         if (sinT2 <= 1.0f) {
             float cosT = std::sqrt(1.0f - sinT2);
-            refractedDir = rayDir * eta + n * (eta * cosI - cosT);
-            Colour refractedColour = traceRayRecursive(scene, hitPoint - n * 0.0001f, refractedDir, bounce + 1);
+            refractedDir = ray.direction * eta + n * (eta * cosI - cosT);
+            Colour refractedColour = traceRayRecursive(scene, Ray(hitPoint - n * 0.0001f, refractedDir), bounce + 1);
             colour = colour + refractedColour;
         }
     }

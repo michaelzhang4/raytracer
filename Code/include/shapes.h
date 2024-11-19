@@ -18,7 +18,7 @@ public:
     Shape(const Material& mat) : material(mat) {}
     virtual ~Shape() = default;
 
-    virtual bool intersect(const Vec3& rayOrigin, const Vec3& rayDir, Intersection& intersection) const = 0;
+    virtual bool intersect(const Ray& ray, Intersection& intersection) const = 0;
     virtual void printInfo() const = 0;
     virtual Vec3 getNormal(const Vec3& hitPoint) const = 0;
 
@@ -32,7 +32,7 @@ public:
 
     Sphere(const Vec3& centerPos, float rad, const Material& mat);
     Vec3 getNormal(const Vec3& hitPoint) const override;
-    bool intersect(const Vec3& rayOrigin, const Vec3& rayDir, Intersection& intersection) const override;
+    bool intersect(const Ray& ray, Intersection& intersection) const override;
     void printInfo() const override;
 };
 
@@ -45,7 +45,7 @@ public:
     float height;
     Cylinder(const Vec3& centerPos, const Vec3& ax, float rad, float h, const Material& mat);
     Vec3 getNormal(const Vec3& hitPoint) const override;
-    bool intersect(const Vec3& rayOrigin, const Vec3& rayDir, Intersection& intersection) const;
+    bool intersect(const Ray& ray, Intersection& intersection) const;
     BoundingBox getBoundingBox() const;
     void printInfo() const override;
 };
@@ -56,7 +56,7 @@ public:
     Vec3 v0, v1, v2;
     Triangle(const Vec3& vertex0, const Vec3& vertex1, const Vec3& vertex2, const Material& mat);
     Vec3 getNormal(const Vec3& hitPoint) const override;
-    bool intersect(const Vec3& rayOrigin, const Vec3& rayDir, Intersection& intersection) const override;
+    bool intersect(const Ray& ray, Intersection& intersection) const override;
     void printInfo() const override;
 };
 
