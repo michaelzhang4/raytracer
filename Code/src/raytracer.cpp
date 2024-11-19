@@ -34,13 +34,30 @@ void BinaryTracer::renderScene(const Scene& scene, std::vector<Colour>& pixels) 
             // Binary mode: set red if any object is hit
             if (hitObject) {
                 pixelColour = Colour(255, 0, 0);  // Red for hit objects
+            } else {
+                pixelColour = Colour(0, 0, 0);  // Black otherwise
             }
-
             pixels[y * camera.width + x] = pixelColour;
         }
     }
 }
 
+float fresnel(const Vec3& I, const Vec3& N, float eta) {
+    float cosI = std::clamp(-1.0f, 1.0f, I.dot(N));  // Dot product of incident ray and normal
+    float sinT2 = eta * eta * (1.0f - cosI * cosI);  // Snell's law to calculate sin^2(theta_t)
+    
+    if (sinT2 > 1.0f) {
+        // Total internal reflection
+        return 1.0f;
+    }
+
+    float cosT = std::sqrt(1.0f - sinT2);  // cos(theta_t)
+
+    float rOrth = (eta * cosI - cosT) / (eta * cosI + cosT);  // Reflectance for perpendicular polarisation
+    float rPara = (cosI - eta * cosT) / (cosI + eta * cosT);  // Reflectance for parallel polarisation
+
+    return (rOrth * rOrth + rPara * rPara) * 0.5f;  // Average reflectance
+}
 
 void PhongTracer::renderScene(const Scene& scene, std::vector<Colour>& pixels) const {
     const Camera& camera = scene.getCamera();
@@ -145,49 +162,60 @@ Colour PhongTracer::traceRayRecursive(const Scene& scene, const Ray& ray, int bo
         Vec3 halfVector = (lightDir + viewDir).normalise();
         float specularIntensity = std::pow(std::max(0.0f, normal.dot(halfVector)), material.specularExponent);
         
-        // specular constant to adjust****
-        Colour specular = material.specularColor * specularIntensity * material.ks * 0.5f;
+        // specular constant
+        Colour specular = material.specularColor * specularIntensity * material.ks * 0.4f;
 
         colour = colour + (diffuse + specular) * shadowFactor;   
     }
 
-    // Adjust illumination of the scene
+    // Adjust illumination of the scene (ambient lighting)
     Colour globalIllumination = material.diffuseColor * 0.25f;
     colour = colour + globalIllumination;
 
-    // Reflection
-    if (material.isReflective) {
+    if (material.isReflective || material.isRefractive) {
         Vec3 adjustedNormal = normal;
-        if (ray.direction.dot(adjustedNormal) > 0.0f) {
-            adjustedNormal = -normal;
-        }
-        Vec3 reflectedDir = ray.direction - adjustedNormal * 2.0f * ray.direction.dot(adjustedNormal);
-        Colour reflectedColour = traceRayRecursive(scene, Ray(hitPoint + adjustedNormal * 0.0001f, reflectedDir), bounce + 1);
-        colour = colour * (1.0f - material.reflectivity) + reflectedColour * material.reflectivity;
-    }
-
-    // Refraction
-    if (material.isRefractive) {
         float n1 = 1.0f, n2 = material.refractiveIndex;
-        Vec3 refractedDir;
-        Vec3 n = normal;
 
-        if (ray.direction.dot(normal) > 0.0f) {
-            std::swap(n1, n2);
-            n = -normal;
+        // Determine if the ray is entering or exiting the material
+        if (ray.direction.dot(normal) > 0.0f) {  // Exiting the material
+            std::swap(n1, n2);  // Swap indices
+            adjustedNormal = -normal;  // Flip normal for correct reflection/refraction
         }
 
         float eta = n1 / n2;
-        float cosI = -n.dot(ray.direction);
-        float sinT2 = eta * eta * (1.0f - cosI * cosI);
+        float fresnelReflectance = 0.0f;
+        Colour reflectedColour(0, 0, 0);
+        Colour refractedColour(0, 0, 0);
 
-        if (sinT2 <= 1.0f) {
-            float cosT = std::sqrt(1.0f - sinT2);
-            refractedDir = ray.direction * eta + n * (eta * cosI - cosT);
-            Colour refractedColour = traceRayRecursive(scene, Ray(hitPoint - n * 0.0001f, refractedDir), bounce + 1);
-            colour = colour + refractedColour;
+        // --- Reflection ---
+        if (material.isReflective) {
+            fresnelReflectance = fresnel(ray.direction, adjustedNormal, eta);
+            Vec3 reflectedDir = ray.direction - adjustedNormal * 2.0f * ray.direction.dot(adjustedNormal);
+            reflectedColour = traceRayRecursive(scene, Ray(hitPoint + adjustedNormal * 0.0001f, reflectedDir), bounce + 1);
+        }
+
+        // --- Refraction ---
+        if (material.isRefractive) {
+            float cosI = -adjustedNormal.dot(ray.direction);
+            float sinT2 = eta * eta * (1.0f - cosI * cosI);
+
+            if (sinT2 <= 1.0f) {  // No total internal reflection
+                float cosT = std::sqrt(1.0f - sinT2);
+                Vec3 refractedDir = ray.direction * eta + adjustedNormal * (eta * cosI - cosT);
+                refractedColour = traceRayRecursive(scene, Ray(hitPoint - adjustedNormal * 0.0001f, refractedDir), bounce + 1);
+            } else {
+                fresnelReflectance = 1.0f;  // Total internal reflection: fully reflective
+            }
+        }
+
+        // --- Blend reflection and refraction ---
+        if (material.isReflective && material.isRefractive) {
+            colour = reflectedColour * fresnelReflectance + refractedColour * (1.0f - fresnelReflectance);
+        } else if (material.isReflective) {
+            colour = reflectedColour;  // Pure reflection
+        } else if (material.isRefractive) {
+            colour = refractedColour;  // Pure refraction
         }
     }
-
     return colour;
 }

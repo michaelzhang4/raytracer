@@ -40,4 +40,6 @@ public:
 //     }
 // };
 
+float fresnel(const Vec3& I, const Vec3& N, float eta);
+
 #endif // RAYTRACER_H
