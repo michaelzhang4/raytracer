@@ -122,7 +122,7 @@ Colour PhongTracer::traceRayRecursive(const Scene& scene, const Vec3& rayOrigin,
 
         // Calculate distance to light
         float lightDistance = (light.position - hitPoint).length();
-        float shadowFactor = 0.05f;
+        float shadowFactor = 0.1f;
 
         // Check for occlusion
         for (const auto& shape : shapes) {
@@ -137,7 +137,7 @@ Colour PhongTracer::traceRayRecursive(const Scene& scene, const Vec3& rayOrigin,
             shadowFactor = 1.0f;
         }
 
-            // Adjust ambient light based on whether the point is in shadow
+        // Adjust ambient light based on whether the point is in shadow
         // Diffuse lighting
         float diffuseIntensity = std::max(0.0f, normal.dot(lightDir));
         Colour diffuse = material.diffuseColor * diffuseIntensity * material.kd;
@@ -148,13 +148,13 @@ Colour PhongTracer::traceRayRecursive(const Scene& scene, const Vec3& rayOrigin,
         float specularIntensity = std::pow(std::max(0.0f, normal.dot(halfVector)), material.specularExponent);
         
         // specular constant to adjust****
-        Colour specular = material.specularColor * specularIntensity * material.ks * 0.1f;
+        Colour specular = material.specularColor * specularIntensity * material.ks * 0.5f;
 
         colour = colour + (diffuse + specular) * shadowFactor;   
     }
 
     // Adjust illumination of the scene
-    Colour globalIllumination = material.diffuseColor * 0.35f;
+    Colour globalIllumination = material.diffuseColor * 0.25f;
     colour = colour + globalIllumination;
 
     // Reflection
