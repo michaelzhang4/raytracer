@@ -102,6 +102,13 @@ Colour Colour::operator/(float scalar) const {
 }
 
 
+Ray::Ray(const Vec3& origin, const Vec3& direction)
+    : origin(origin), direction(direction.normalise()) {}
+
+Vec3 Ray::at(float t) const {
+    return origin + direction * t;
+}
+
 // Constructor
 BoundingBox::BoundingBox(const Vec3& min, const Vec3& max) : min(min), max(max) {}
 

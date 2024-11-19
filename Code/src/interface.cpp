@@ -19,7 +19,7 @@ void textInterface() {
         };
 
         Scene scene(jsonData);
-        scene.printSceneInfo();
+        // scene.printSceneInfo();
 
         auto [width, height] = scene.sceneWidthHeight();
 

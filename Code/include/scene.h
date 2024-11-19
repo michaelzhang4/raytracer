@@ -3,7 +3,6 @@
 
 #include "camera.h"
 #include "shapes.h"
-#include "light.h"
 #include "raytracer.h"
 #include "helpers.h"
 #include "tonemap.h"

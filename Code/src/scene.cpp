@@ -16,13 +16,9 @@ Scene::Scene(const json& jsonData) {
     Vec3 cameraPos = getVec3FromJson(jsonCamera, "position", {0.0f, 0.0f, 0.0f});
     Vec3 cameraLookAt = getVec3FromJson(jsonCamera, "lookAt", {0.0f, 0.0f, -1.0f});
     Vec3 cameraUp = getVec3FromJson(jsonCamera, "upVector", {0.0f, 1.0f, 0.0f});
-    std::cout << "HIII" << std::endl;
     int width = jsonCamera.value("width", 800);
-    std::cout << "HIII" << std::endl;
     int height = jsonCamera.value("height", 600);
-    std::cout << "HIII" << std::endl;
     float fov = jsonCamera.value("fov", 90.0f);
-    std::cout << "HIII" << std::endl;
     float exposure = jsonCamera.value("exposure", 0.1f);
     float aspectRatio = static_cast<float>(width) / height;
     camera = Camera(cameraPos, cameraLookAt, cameraUp, width, height, fov, exposure, aspectRatio);

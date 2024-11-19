@@ -2,7 +2,6 @@
 #define RAYTRACER_H
 
 #include "common.h"
-#include "ray.h"
 
 class Scene;
 
