@@ -93,9 +93,15 @@ Scene::Scene(const json& jsonData) {
             }
         }
     }
+    bvh.build(shapes);
 
     std::cout << "Successfully initialised scene with render mode: " << rendermodeStr << "!" << std::endl;
 }
+
+bool Scene::intersect(const Ray& ray, Intersection& nearestIntersection) const {
+    return bvh.traverse(ray, nearestIntersection);
+}
+
 
 void Scene::renderScene(std::vector<Colour>& pixels) {
 

@@ -84,8 +84,12 @@ Vec3 Cylinder::getNormal(const Vec3& point) const {
 }
 
 BoundingVolume Cylinder::getBoundingVolume() const {
-    Vec3 extents = Vec3(radius);
-    return BoundingVolume(center - extents, center + axis * height + extents);
+    Vec3 radiusExtent = Vec3(radius);
+    Vec3 cap1 = center + axis * height;
+    Vec3 cap2 = center - axis * height;
+    Vec3 minV = cap1.min(cap2) - radiusExtent;
+    Vec3 maxV = cap1.max(cap2) + radiusExtent;
+    return BoundingVolume(minV, maxV);
 }
 
 Vec3 Cylinder::getCentroid() const { return center + axis * (height / 2.0f); }

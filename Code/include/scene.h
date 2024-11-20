@@ -7,6 +7,7 @@
 #include "helpers.h"
 #include "parser.h"
 #include "tonemap.h"
+#include "bvh.h"
 
 // Scene class
 class Scene {
@@ -22,6 +23,7 @@ public:
     const RenderMode& getRenderMode() const { return renderMode; }
     int getBounces() const { return nbounces; }
     float getExposure() const { return camera.exposure; }
+    bool intersect(const Ray& ray, Intersection& nearestIntersection) const;
 private:
     int nbounces;
     Camera camera;
@@ -29,6 +31,7 @@ private:
     std::vector<std::shared_ptr<Shape>> shapes;
     std::vector<Light> lights;
     RenderMode renderMode;
+    BVH bvh;
 };
 
 #endif

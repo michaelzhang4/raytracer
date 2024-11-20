@@ -28,13 +28,6 @@ bool BoundingVolume::intersects(const Ray& ray) const {
     return true;
 }
 
-// Computes a combined AABB that encloses two AABBs
-BoundingVolume BoundingVolume::combine(const BoundingVolume& a, const BoundingVolume& b) {
-    Vec3 combinedMin = a.minV.min(b.minV);
-    Vec3 combinedMax = b.maxV.max(b.maxV);
-    return BoundingVolume(combinedMin, combinedMax);
-}
-
 BoundingVolume BoundingVolume::computeBounds(const std::vector<std::shared_ptr<Shape>>& shapes, int start, int end) {
     Vec3 minExtents = Vec3(std::numeric_limits<float>::max());
     Vec3 maxExtents = Vec3(std::numeric_limits<float>::lowest());
@@ -42,7 +35,7 @@ BoundingVolume BoundingVolume::computeBounds(const std::vector<std::shared_ptr<S
     for (int i = start; i < end; ++i) {
         BoundingVolume shapeBounds = shapes[i]->getBoundingVolume();
         minExtents = minExtents.min(shapeBounds.minV);
-        maxExtents = minExtents.min(shapeBounds.maxV);
+        maxExtents = maxExtents.max(shapeBounds.maxV);
     }
 
     return BoundingVolume(minExtents, maxExtents);
@@ -69,7 +62,7 @@ void BVH::build(const std::vector<std::shared_ptr<Shape>>& shapes) {
     root = buildRecursive(shapesCopy, 0, shapesCopy.size());
 }
 
-// Recursive function to build the BVH
+
 std::shared_ptr<BVHNode> BVH::buildRecursive(std::vector<std::shared_ptr<Shape>>& shapes, int start, int end) {
     auto node = std::make_shared<BVHNode>();
 
@@ -102,11 +95,13 @@ std::shared_ptr<BVHNode> BVH::buildRecursive(std::vector<std::shared_ptr<Shape>>
     return node;
 }
 
+
 // Traverses the BVH to find the closest intersection
 bool BVH::traverse(const Ray& ray, Intersection& nearestIntersection) const {
     if (!root) return false; // No BVH built
     return traverseRecursive(root, ray, nearestIntersection);
 }
+
 
 // Recursive function to traverse the BVH
 bool BVH::traverseRecursive(const std::shared_ptr<BVHNode>& node, const Ray& ray, Intersection& nearestIntersection) const {

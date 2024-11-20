@@ -92,6 +92,7 @@ void PhongTracer::renderScene(const Scene& scene, std::vector<Colour>& pixels) c
 
 }
 
+
 Colour PhongTracer::traceRayRecursive(const Scene& scene, const Ray& ray, int bounce) const {
     const int bounceCount = scene.getBounces();
     const Colour& backgroundColour = scene.getBackgroundColour();
@@ -108,16 +109,10 @@ Colour PhongTracer::traceRayRecursive(const Scene& scene, const Ray& ray, int bo
     nearestIntersection.t = std::numeric_limits<float>::max();
     nearestIntersection.hit = false;
 
-    // Find nearest intersection
-    for (const auto& shape : shapes) {
-        Intersection tempIntersection;
-        if (shape->intersect(ray, tempIntersection) && tempIntersection.t < nearestIntersection.t) {
-            nearestIntersection = tempIntersection;
-        }
-    }
 
-    if (!nearestIntersection.hit) {
-        return backgroundColour;
+    // Find nearest intersection using BVH
+    if (!scene.intersect(ray, nearestIntersection)) {
+        return backgroundColour; // No intersection
     }
 
     const Vec3& hitPoint = nearestIntersection.hitPoint;
