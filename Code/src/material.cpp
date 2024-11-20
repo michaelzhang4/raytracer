@@ -4,21 +4,21 @@
 Material::Material()
     : kd(0.8f), ks(0.2f), specularExponent(10), diffuseColor({255, 255, 255}),
       specularColor({255, 255, 255}), isReflective(false), reflectivity(0.0f),
-      isRefractive(false), refractiveIndex(1.0f) {}
+      isRefractive(false), refractiveIndex(1.0f), texture(nullptr) {}
 
 // Parameterized constructor
 Material::Material(float kd, float ks, int specExp, const Colour& diffuse, const Colour& specular,
-                   bool reflective, float reflectivity, bool refractive, float refractiveIndex)
+                   bool reflective, float reflectivity, bool refractive, float refractiveIndex, std::string texturePath)
     : kd(kd), ks(ks), specularExponent(specExp), diffuseColor(diffuse),
       specularColor(specular), isReflective(reflective), reflectivity(reflectivity),
-      isRefractive(refractive), refractiveIndex(refractiveIndex) {}
-
-// Colour Material::getDiffuseColor(Point2f uv) const {
-//     if (texture) {
-//         return texture->sample(uv.x(), uv.y());
-//     }
-//     return diffuseColor;
-// }
+      isRefractive(refractive), refractiveIndex(refractiveIndex) {
+        // texture = nullptr;
+        if (!texturePath.empty()) {
+          texture = std::make_shared<Texture>(texturePath);  // Create a shared pointer
+        } else {
+          texture = nullptr;  // No texture provided
+        }
+      }
 
 // Print material info (for debugging)
 void Material::printMaterialInfo() const {

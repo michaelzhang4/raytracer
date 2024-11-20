@@ -1,11 +1,33 @@
 #include "texture.h"
 
+Texture::Texture(const std::string& filename) {
+    if (filename.empty()) {
+        // Handle empty filename by setting everything to zero
+        width = 0;
+        height = 0;
+        pixels.clear(); // Ensure the pixel data is empty
+
+        return;
+    }
+    std::string texturePath = "textures/";
+    std::string path = texturePath+filename+".ppm";
+    auto [data, dimensions] = readPPM(path);
+    width = dimensions.first;
+    height = dimensions.second;
+    pixels = std::move(data);
+}
+
 // Texture::Texture(const std::string& filename) {
-//     // Example of loading a PPM file (Assume PPM::readPPM function exists)
-//     auto [data, dimensions] = PPM::readPPM(filename);
-//     width = dimensions.x();
-//     height = dimensions.y();
+//     std::string texturePath = "textures/";
+//     std::string path = texturePath+filename+".ppm";
+//     std::cout << "Loading texture: " << filename << std::endl;
+//     auto [data, dimensions] = readPPM(path);
+//     assert(!data.empty() && "Texture data is empty!");
+//     assert(dimensions.first > 0 && dimensions.second > 0 && "Invalid texture dimensions!");
+//     width = dimensions.first;
+//     height = dimensions.second;
 //     pixels = std::move(data);
+//     std::cout << "Texture loaded successfully: " << width << "x" << height << std::endl;
 // }
 
 Colour Texture::getPixel(int u, int v) const {

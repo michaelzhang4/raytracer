@@ -22,6 +22,44 @@ int parse(const std::string& filepath, json &jsonData) {
     return 0;
 }
 
+Vec3 getVec3FromJson(const json& jsonObj, const std::string& key, const Vec3& defaultVal)
+ {
+    if (jsonObj.contains(key) && jsonObj[key].is_array() && jsonObj[key].size() == 3) {
+        return Vec3{
+            jsonObj[key][0].get<float>(),
+            jsonObj[key][1].get<float>(),
+            jsonObj[key][2].get<float>()
+        };
+    }
+    return defaultVal;
+}
+
+Colour getColourFromJson(const json& jsonObj, const std::string& key, const Colour& defaultVal) {
+    if (jsonObj.contains(key) && jsonObj[key].is_array() && jsonObj[key].size() == 3) {
+        return Colour{
+            static_cast<int>(jsonObj[key][0].get<float>() * 255),
+            static_cast<int>(jsonObj[key][1].get<float>() * 255),
+            static_cast<int>(jsonObj[key][2].get<float>() * 255)
+        };
+    }
+    return defaultVal;
+}
+
+Material parseMaterial(const json& materialData) {
+    float kd = materialData.value("kd", 0.8f);
+    float ks = materialData.value("ks", 0.2f);
+    int specularExponent = materialData.value("specularexponent", 10);
+    Colour diffuse = getColourFromJson(materialData, "diffusecolor", Colour(255, 255, 255));
+    Colour specular = getColourFromJson(materialData, "specularcolor", Colour(255, 255, 255));
+    bool isReflective = materialData.value("isreflective", false);
+    float reflectivity = materialData.value("reflectivity", 1.0f);
+    bool isRefractive = materialData.value("isrefractive", false);
+    float refractiveIndex = materialData.value("refractiveindex", 1.0f);
+    std::string texturePath = materialData.value("texture", "");
+
+    return Material(kd, ks, specularExponent, diffuse, specular, isReflective, reflectivity, isRefractive, refractiveIndex, texturePath);
+}
+
 void displayJsonData(const json &jsonData) {
     // Accessing top-level elements
     std::string rendermode = jsonData["rendermode"];

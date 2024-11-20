@@ -65,7 +65,8 @@ void PhongTracer::renderScene(const Scene& scene, std::vector<Colour>& pixels) c
 
     pixels.resize(camera.width * camera.height);
 
-    #pragma omp parallel for
+    // #pragma omp parallel for
+    #pragma omp parallel for schedule(static, 1)
     for (int y = 0; y < camera.height; ++y) {
         for (int x = 0; x < camera.width; ++x) {
             Ray cameraRay = Ray(camera.position, camera.getRayDirection(x, y));
@@ -108,6 +109,9 @@ Colour PhongTracer::traceRayRecursive(const Scene& scene, const Ray& ray, int bo
     Intersection nearestIntersection;
     nearestIntersection.t = std::numeric_limits<float>::max();
     nearestIntersection.hit = false;
+    // nearestIntersection.hitPoint = Vec3(0, 0, 0);
+    // nearestIntersection.normal = Vec3(0, 0, 0);
+    // nearestIntersection.shape = nullptr;
 
     // Find nearest intersection
     for (const auto& shape : shapes) {
@@ -123,9 +127,22 @@ Colour PhongTracer::traceRayRecursive(const Scene& scene, const Ray& ray, int bo
 
     const Vec3& hitPoint = nearestIntersection.hitPoint;
     const Vec3& normal = nearestIntersection.normal;
-    const Material& material = nearestIntersection.material;
+
+    std::shared_ptr<Material> material = nearestIntersection.shape->getMaterial();
 
     Colour colour = {0, 0, 0};
+
+    // Get texture coordinates
+    std::pair<float, float> uv = nearestIntersection.shape->getUV(hitPoint);
+    float u = uv.first, v = uv.second;
+
+    // Sample texture if the material has one
+    Colour textureDiffuseColor = material->diffuseColor;
+    // #pragma omp critical
+    if (material->texture && material->texture->width > 0) {
+        textureDiffuseColor = material->texture->sample(u, v);
+    }
+    
 
     // Light contributions
     for (const auto& light : lights) {
@@ -155,26 +172,26 @@ Colour PhongTracer::traceRayRecursive(const Scene& scene, const Ray& ray, int bo
         // Adjust ambient light based on whether the point is in shadow
         // Diffuse lighting
         float diffuseIntensity = std::max(0.0f, normal.dot(lightDir));
-        Colour diffuse = material.diffuseColor * diffuseIntensity * material.kd;
-
+        Colour diffuse = textureDiffuseColor * diffuseIntensity * material->kd;
+        
         // Specular lighting
         Vec3 viewDir = (camera.position - hitPoint).normalise();
         Vec3 halfVector = (lightDir + viewDir).normalise();
-        float specularIntensity = std::pow(std::max(0.0f, normal.dot(halfVector)), material.specularExponent);
+        float specularIntensity = std::pow(std::max(0.0f, normal.dot(halfVector)), material->specularExponent);
         
         // specular constant
-        Colour specular = material.specularColor * specularIntensity * material.ks * 0.4f;
+        Colour specular = material->specularColor * specularIntensity * material->ks * 0.4f;
 
         colour = colour + (diffuse + specular) * shadowFactor;   
     }
 
     // Adjust illumination of the scene (ambient lighting)
-    Colour globalIllumination = material.diffuseColor * 0.25f;
+    Colour globalIllumination = textureDiffuseColor  * 0.25f;
     colour = colour + globalIllumination;
 
-    if (material.isReflective || material.isRefractive) {
+    if (material->isReflective || material->isRefractive) {
         Vec3 adjustedNormal = normal;
-        float n1 = 1.0f, n2 = material.refractiveIndex;
+        float n1 = 1.0f, n2 = material->refractiveIndex;
 
         // Determine if the ray is entering or exiting the material
         if (ray.direction.dot(normal) > 0.0f) {  // Exiting the material
@@ -188,14 +205,14 @@ Colour PhongTracer::traceRayRecursive(const Scene& scene, const Ray& ray, int bo
         Colour refractedColour(0, 0, 0);
 
         // --- Reflection ---
-        if (material.isReflective) {
+        if (material->isReflective) {
             fresnelReflectance = fresnel(ray.direction, adjustedNormal, eta);
             Vec3 reflectedDir = ray.direction - adjustedNormal * 2.0f * ray.direction.dot(adjustedNormal);
             reflectedColour = traceRayRecursive(scene, Ray(hitPoint + adjustedNormal * 0.0001f, reflectedDir), bounce + 1);
         }
 
         // --- Refraction ---
-        if (material.isRefractive) {
+        if (material->isRefractive) {
             float cosI = -adjustedNormal.dot(ray.direction);
             float sinT2 = eta * eta * (1.0f - cosI * cosI);
 
@@ -209,11 +226,11 @@ Colour PhongTracer::traceRayRecursive(const Scene& scene, const Ray& ray, int bo
         }
 
         // --- Blend reflection and refraction ---
-        if (material.isReflective && material.isRefractive) {
+        if (material->isReflective && material->isRefractive) {
             colour = reflectedColour * fresnelReflectance + refractedColour * (1.0f - fresnelReflectance);
-        } else if (material.isReflective) {
+        } else if (material->isReflective) {
             colour = reflectedColour;  // Pure reflection
-        } else if (material.isRefractive) {
+        } else if (material->isRefractive) {
             colour = refractedColour;  // Pure refraction
         }
     }

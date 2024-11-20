@@ -5,6 +5,7 @@
 #include "shapes.h"
 #include "raytracer.h"
 #include "helpers.h"
+#include "parser.h"
 #include "tonemap.h"
 
 // Scene class

@@ -2,6 +2,7 @@
 #define MATERIAL_H
 
 #include "common.h"
+#include "texture.h"
 
 struct Material {
     float kd;  // Diffuse coefficient
@@ -13,13 +14,14 @@ struct Material {
     float reflectivity;  // Reflectivity percentage
     bool isRefractive;
     float refractiveIndex;
+    std::shared_ptr<Texture> texture;
 
     // Default constructor
     Material();
 
     // Parameterized constructor
     Material(float kd, float ks, int specularExponent, const Colour& diffuse, const Colour& specular, 
-             bool reflective, float reflectivity, bool refractive, float refrIndex);
+             bool reflective, float reflectivity, bool refractive, float refrIndex, std::string texturePath);
     // Colour getDiffuseColor(Point2f uv) const;
     // Debugging utility
     void printMaterialInfo() const;

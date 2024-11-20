@@ -1,7 +1,7 @@
 #include "shapes.h"
 
 // Sphere class definition
-Sphere::Sphere(const Vec3 &centerPos, float rad, const Material& mat)
+Sphere::Sphere(const Vec3 &centerPos, float rad, std::shared_ptr<Material> mat)
     : Shape(mat), center(centerPos), radius(rad) {}
 
 Vec3 Sphere::getNormal(const Vec3& hitPoint) const {
@@ -33,21 +33,28 @@ bool Sphere::intersect(const Ray& ray, Intersection& intersection) const {
     intersection.t = t;
     intersection.hitPoint = ray.at(t);
     intersection.normal = getNormal(intersection.hitPoint);
-    intersection.material = material;
+    intersection.shape = this;
 
     return true;
 }
+
+std::pair<float, float> Sphere::getUV(const Vec3& hitPoint) const {
+    Vec3 hitPointLocal = hitPoint - center;
+    float u = 0.5f + atan2(hitPointLocal.z, hitPointLocal.x) / (2.0f * M_PI);
+    float v = 0.5f - asin(hitPointLocal.y / radius) / M_PI;
+    return {u, v};
+}
+
 
 
 void Sphere::printInfo() const {
     std::cout << "Sphere Info:" << std::endl;
     std::cout << "center (x,y,z): " << center.x << " " << center.y << " " << center.z << std::endl;
     std::cout << "radius: " << radius << std::endl;
-    material.printMaterialInfo();
 }
 
 // Cylinder class definition
-Cylinder::Cylinder(const Vec3& centerPos, const Vec3& ax, float rad, float h, const Material& mat)
+Cylinder::Cylinder(const Vec3& centerPos, const Vec3& ax, float rad, float h, std::shared_ptr<Material> mat)
     : Shape(mat), center(centerPos), axis(ax.normalise()), radius(rad), height(h) {}
 
 Vec3 Cylinder::getNormal(const Vec3& point) const {
@@ -147,7 +154,7 @@ bool Cylinder::intersect(const Ray& ray, Intersection& intersection) const {
         intersection.t = min_hit->first;
         intersection.hitPoint = min_hit->second;
         intersection.normal = getNormal(intersection.hitPoint);
-        intersection.material = material;
+        intersection.shape = this;
         return true;
     }
 
@@ -174,18 +181,52 @@ BoundingBox Cylinder::getBoundingBox() const {
     return BoundingBox(min, max);
 }
 
+std::pair<float, float> Cylinder::getUV(const Vec3& hitPoint) const {
+    // Project hitPoint onto the cylinder's axis
+    Vec3 hitToCenter = hitPoint - center;
+    float projection = hitToCenter.dot(axis); // Distance along the axis
+
+    // Handle UV mapping based on whether hitPoint is on the side or caps
+    if (projection >= 0.0f && projection <= height) {
+        // SIDE SURFACE
+        // Remove the axis component to get the point on the circular cross-section
+        Vec3 circularPoint = hitToCenter - axis * projection;
+
+        // Calculate angle for 'u'
+        float u = 0.5f + atan2(circularPoint.z, circularPoint.x) / (2.0f * M_PI);
+
+        // Calculate 'v' based on height
+        float v = projection / height;
+
+        return {u, v};
+    } else {
+        // CAPS
+        Vec3 capCenter = (projection < 0.0f) ? center : (center + axis * height);
+        Vec3 capToPoint = hitPoint - capCenter;
+
+        // Convert to polar coordinates
+        float u = 0.5f + atan2(capToPoint.z, capToPoint.x) / (2.0f * M_PI);
+        float v = std::sqrt(capToPoint.x * capToPoint.x + capToPoint.z * capToPoint.z) / radius;
+
+        return {u, v};
+    }
+}
+
 void Cylinder::printInfo() const {
     std::cout << "Cylinder Info:" << std::endl;
     std::cout << "center (x,y,z): " << center.x << " " << center.y << " " << center.z << std::endl;
     std::cout << "axis (x,y,z): " << axis.x << " " << axis.y << " " << axis.z << std::endl;
     std::cout << "radius: " << radius << std::endl;
     std::cout << "height: " << height << std::endl;
-    material.printMaterialInfo();
 }
 
 // Triangle class definition
-Triangle::Triangle(const Vec3& vertex0, const Vec3& vertex1, const Vec3& vertex2, const Material& mat)
-    : Shape(mat), v0(vertex0), v1(vertex1), v2(vertex2) {}
+Triangle::Triangle(const Vec3& vertex0, const Vec3& vertex1, const Vec3& vertex2,
+             const std::pair<float, float>& uv0,
+             const std::pair<float, float>& uv1,
+             const std::pair<float, float>& uv2,
+             std::shared_ptr<Material> mat)
+    : Shape(mat), v0(vertex0), v1(vertex1), v2(vertex2), uv0(uv0), uv1(uv1), uv2(uv2) {}
 
 Vec3 Triangle::getNormal(const Vec3& hitPoint) const {
     (void)hitPoint; // Explicitly ignore the unused parameter
@@ -227,18 +268,38 @@ bool Triangle::intersect(const Ray& ray, Intersection& intersection) const {
         intersection.t = t;
         intersection.hitPoint = ray.origin + ray.direction * t;
         intersection.normal = getNormal(intersection.hitPoint);
-        intersection.material = material;
+        intersection.shape = this;
         return true;
     }
 
     return false;
 }
 
+std::pair<float, float> Triangle::getUV(const Vec3& hitPoint) const {
+    Vec3 barycentric = computeBarycentricCoordinates(hitPoint, v0, v1, v2);
+    float u = barycentric.x * uv0.first + barycentric.y * uv1.first + barycentric.z * uv2.first;
+    float v = barycentric.x * uv0.second + barycentric.y * uv1.second + barycentric.z * uv2.second;
+    return {u, v};
+}
 
 void Triangle::printInfo() const {
     std::cout << "Triangle Info:" << std::endl;
     std::cout << "v0 (x,y,z): " << v0.x << " " << v0.y << " " << v0.z << std::endl;
     std::cout << "v1 (x,y,z): " << v1.x << " " << v1.y << " " << v1.z << std::endl;
     std::cout << "v2 (x,y,z): " << v2.x << " " << v2.y << " " << v2.z << std::endl;
-    material.printMaterialInfo();
+}
+
+
+Vec3 computeBarycentricCoordinates(const Vec3& p, const Vec3& a, const Vec3& b, const Vec3& c) {
+    Vec3 v0 = b - a, v1 = c - a, v2 = p - a;
+    float d00 = v0.dot(v0);
+    float d01 = v0.dot(v1);
+    float d11 = v1.dot(v1);
+    float d20 = v2.dot(v0);
+    float d21 = v2.dot(v1);
+    float denom = d00 * d11 - d01 * d01;
+    float v = (d11 * d20 - d01 * d21) / denom;
+    float w = (d00 * d21 - d01 * d20) / denom;
+    float u = 1.0f - v - w;
+    return Vec3(u, v, w);
 }

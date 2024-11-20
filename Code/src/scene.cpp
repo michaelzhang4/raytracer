@@ -41,12 +41,12 @@ Scene::Scene(const json& jsonData) {
         for (const auto& shapeData : jsonScene["shapes"]) {
             std::string type = shapeData["type"];
             // Check if "material" key exists, otherwise use a default material
-            Material material;
+            std::shared_ptr<Material> material;
             if (shapeData.contains("material")) {
-                material = parseMaterial(shapeData.at("material"));
+                material = std::make_shared<Material>(parseMaterial(shapeData.at("material")));
             } else {
                 std::cout << "Material not found for shape, using default material.\n";
-                material = Material(); // Or set to some default material values
+                material = std::make_shared<Material>(); // Or set to some default material values
             }
 
             if (type == "sphere") {
@@ -63,7 +63,27 @@ Scene::Scene(const json& jsonData) {
                 Vec3 v0 = getVec3FromJson(shapeData, "v0", {0, 0, 0});
                 Vec3 v1 = getVec3FromJson(shapeData, "v1", {1, 0, 0});
                 Vec3 v2 = getVec3FromJson(shapeData, "v2", {0, 1, 0});
-                shapes.push_back(std::make_shared<Triangle>(v0, v1, v2, material));
+
+                // Compute the bounding box of the triangle
+                Vec3 minVec = {std::min({v0.x, v1.x, v2.x}),
+                            std::min({v0.y, v1.y, v2.y}),
+                            std::min({v0.z, v1.z, v2.z})};
+                Vec3 maxVec = {std::max({v0.x, v1.x, v2.x}),
+                            std::max({v0.y, v1.y, v2.y}),
+                            std::max({v0.z, v1.z, v2.z})};
+                Vec3 range = maxVec - minVec;
+
+                // Calculate UV coordinates
+                auto calculateUV = [&](const Vec3& v) -> std::pair<float, float> {
+                    return {(v.x - minVec.x) / range.x, (v.y - minVec.y) / range.y};
+                };
+
+                std::pair<float, float> uv0 = calculateUV(v0);
+                std::pair<float, float> uv1 = calculateUV(v1);
+                std::pair<float, float> uv2 = calculateUV(v2);
+
+                // Add the triangle to the list of shapes
+                shapes.push_back(std::make_shared<Triangle>(v0, v1, v2, uv0, uv1, uv2, material));
             }
         }
     }
