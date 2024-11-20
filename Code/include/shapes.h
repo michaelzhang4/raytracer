@@ -4,7 +4,9 @@
 #include "common.h"
 #include "material.h"
 
-class Shape; // Forward declaration for Shape
+// Forward declaration of BoundingVolume
+class BoundingVolume;
+class Shape;
 
 struct Intersection {
     bool hit;                   // Did the ray intersect the object?
@@ -23,6 +25,8 @@ public:
     std::shared_ptr<Material> getMaterial() const {
         return material;
     }
+    virtual BoundingVolume getBoundingVolume() const = 0;
+    virtual Vec3 getCentroid() const = 0;
     virtual ~Shape() = default;
     virtual std::pair<float, float> getUV(const Vec3& hitPoint) const = 0;
     virtual bool intersect(const Ray& ray, Intersection& intersection) const = 0;
@@ -36,8 +40,9 @@ class Sphere : public Shape {
 public:
     Vec3 center;
     float radius;
-
     Sphere(const Vec3& centerPos, float rad, std::shared_ptr<Material> mat);
+    BoundingVolume getBoundingVolume() const override;
+    Vec3 getCentroid() const override;
     Vec3 getNormal(const Vec3& hitPoint) const override;
     bool intersect(const Ray& ray, Intersection& intersection) const override;
     std::pair<float, float> getUV(const Vec3& hitPoint) const override;
@@ -54,8 +59,9 @@ public:
     Cylinder(const Vec3& centerPos, const Vec3& ax, float rad, float h, std::shared_ptr<Material> mat);
     Vec3 getNormal(const Vec3& hitPoint) const override;
     bool intersect(const Ray& ray, Intersection& intersection) const;
+    BoundingVolume getBoundingVolume() const override;
+    Vec3 getCentroid() const override;
     std::pair<float, float> getUV(const Vec3& hitPoint) const override;
-    BoundingBox getBoundingBox() const;
     void printInfo() const override;
 };
 
@@ -72,6 +78,8 @@ public:
              const std::pair<float, float>& uv2,
              std::shared_ptr<Material> mat);
     Vec3 getNormal(const Vec3& hitPoint) const override;
+    BoundingVolume getBoundingVolume() const override;
+    Vec3 getCentroid() const override;
     bool intersect(const Ray& ray, Intersection& intersection) const override;
     std::pair<float, float> getUV(const Vec3& hitPoint) const override;
     void printInfo() const override;

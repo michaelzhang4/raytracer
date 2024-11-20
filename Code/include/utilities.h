@@ -22,6 +22,13 @@ struct Vec3 {
     // Constructor to initialise all components to the same scalar value
     explicit Vec3(float scalar) : x(scalar), y(scalar), z(scalar) {}
 
+    Vec3 min(const Vec3& other) const;
+    Vec3 max(const Vec3& other) const;
+    // Access operator (const version for read-only access)
+    const float& operator[](int index) const;
+
+    // Access operator (non-const version for modification)
+    float& operator[](int index);
     Vec3 operator+(const Vec3& other) const;
     Vec3 operator+(float scalar) const;
     Vec3 operator-() const {
@@ -76,28 +83,5 @@ public:
 
     Vec3 at(float t) const;
 };
-
-
-class BoundingBox {
-public:
-    Vec3 min;  // Minimum corner of the bounding box
-    Vec3 max;  // Maximum corner of the bounding box
-
-    // Constructor
-    BoundingBox(const Vec3& min, const Vec3& max);
-
-    // Check if a point is inside the bounding box
-    bool contains(const Vec3& point) const;
-
-    // Check if this bounding box intersects with another
-    bool intersects(const BoundingBox& other) const;
-
-    // Expand the bounding box to include another point
-    void expand(const Vec3& point);
-
-    // Merge this bounding box with another to create a new bounding box
-    static BoundingBox merge(const BoundingBox& box1, const BoundingBox& box2);
-};
-
 
 #endif

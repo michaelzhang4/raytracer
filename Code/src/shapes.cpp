@@ -1,4 +1,5 @@
 #include "shapes.h"
+#include "bvh.h"
 
 // Sphere class definition
 Sphere::Sphere(const Vec3 &centerPos, float rad, std::shared_ptr<Material> mat)
@@ -7,6 +8,12 @@ Sphere::Sphere(const Vec3 &centerPos, float rad, std::shared_ptr<Material> mat)
 Vec3 Sphere::getNormal(const Vec3& hitPoint) const {
     return (hitPoint - center).normalise();
 }
+
+BoundingVolume Sphere::getBoundingVolume() const {
+    return BoundingVolume(center - Vec3(radius), center + Vec3(radius));
+}
+
+Vec3 Sphere::getCentroid() const { return center; }
 
 bool Sphere::intersect(const Ray& ray, Intersection& intersection) const {
     Vec3 oc = ray.origin - center;
@@ -75,6 +82,13 @@ Vec3 Cylinder::getNormal(const Vec3& point) const {
         return radial.normalise();
     }
 }
+
+BoundingVolume Cylinder::getBoundingVolume() const {
+    Vec3 extents = Vec3(radius);
+    return BoundingVolume(center - extents, center + axis * height + extents);
+}
+
+Vec3 Cylinder::getCentroid() const { return center + axis * (height / 2.0f); }
 
 bool Cylinder::intersect(const Ray& ray, Intersection& intersection) const {
     Vec3 oc = ray.origin - center;
@@ -161,26 +175,6 @@ bool Cylinder::intersect(const Ray& ray, Intersection& intersection) const {
     return false;
 }
 
-BoundingBox Cylinder::getBoundingBox() const {
-    Vec3 axisNorm = axis.normalise();
-    Vec3 p1 = center - axisNorm * height;
-    Vec3 p2 = center + axisNorm * height;
-
-    Vec3 min = Vec3(
-        std::min(p1.x, p2.x) - radius,
-        std::min(p1.y, p2.y) - radius,
-        std::min(p1.z, p2.z) - radius
-    );
-
-    Vec3 max = Vec3(
-        std::max(p1.x, p2.x) + radius,
-        std::max(p1.y, p2.y) + radius,
-        std::max(p1.z, p2.z) + radius
-    );
-
-    return BoundingBox(min, max);
-}
-
 std::pair<float, float> Cylinder::getUV(const Vec3& hitPoint) const {
     // Project hitPoint onto the cylinder's axis
     Vec3 hitToCenter = hitPoint - center;
@@ -254,6 +248,14 @@ Vec3 Triangle::getNormal(const Vec3& hitPoint) const {
     Vec3 edge2 = v2 - v0;
     return edge1.cross(edge2).normalise();
 }
+
+BoundingVolume Triangle::getBoundingVolume() const {
+        Vec3 minV = v0.min(v1).min(v2);
+        Vec3 maxV = v0.max(v1).max(v2);
+        return BoundingVolume(minV, maxV);
+    }
+
+Vec3 Triangle::getCentroid() const { return (v0 + v1 + v2) / 3.0f; }
 
 bool Triangle::intersect(const Ray& ray, Intersection& intersection) const {
     Vec3 edge1 = v1 - v0;

@@ -1,4 +1,13 @@
 #include "utilities.h"
+#include <stdexcept>
+
+Vec3 Vec3::min(const Vec3& other) const {
+    return {std::min(x,other.x), std::min(y,other.y), std::min(z,other.z)};
+}
+
+Vec3 Vec3::max(const Vec3& other) const {
+    return {std::max(x,other.x), std::max(y,other.y), std::max(z,other.z)};
+}
 
 // Vec3 method definitions
 Vec3 Vec3::operator+(const Vec3& other) const {
@@ -59,6 +68,24 @@ float Vec3::length() const {
     return std::sqrt(x * x + y * y + z * z);
 }
 
+// Const version (read-only access)
+const float& Vec3::operator[](int index) const {
+    if (index == 0) return x;
+    if (index == 1) return y;
+    if (index == 2) return z;
+
+    throw std::out_of_range("Index out of range");
+}
+
+// Non-const version (allows modification)
+float& Vec3::operator[](int index) {
+    if (index == 0) return x;
+    if (index == 1) return y;
+    if (index == 2) return z;
+
+    throw std::out_of_range("Index out of range");
+}
+
 // Constructor
 Colour::Colour(int red, int green, int blue) : r(red), g(green), b(blue) {}
 
@@ -106,48 +133,4 @@ Ray::Ray(const Vec3& origin, const Vec3& direction)
 
 Vec3 Ray::at(float t) const {
     return origin + direction * t;
-}
-
-// Constructor
-BoundingBox::BoundingBox(const Vec3& min, const Vec3& max) : min(min), max(max) {}
-
-// Check if a point is inside the bounding box
-bool BoundingBox::contains(const Vec3& point) const {
-    return (point.x >= min.x && point.x <= max.x &&
-            point.y >= min.y && point.y <= max.y &&
-            point.z >= min.z && point.z <= max.z);
-}
-
-// Check if this bounding box intersects with another
-bool BoundingBox::intersects(const BoundingBox& other) const {
-    return (min.x <= other.max.x && max.x >= other.min.x &&
-            min.y <= other.max.y && max.y >= other.min.y &&
-            min.z <= other.max.z && max.z >= other.min.z);
-}
-
-// Expand the bounding box to include another point
-void BoundingBox::expand(const Vec3& point) {
-    min.x = std::min(min.x, point.x);
-    min.y = std::min(min.y, point.y);
-    min.z = std::min(min.z, point.z);
-    max.x = std::max(max.x, point.x);
-    max.y = std::max(max.y, point.y);
-    max.z = std::max(max.z, point.z);
-}
-
-// Merge this bounding box with another to create a new bounding box
-BoundingBox BoundingBox::merge(const BoundingBox& box1, const BoundingBox& box2) {
-    Vec3 newMin(
-        std::min(box1.min.x, box2.min.x),
-        std::min(box1.min.y, box2.min.y),
-        std::min(box1.min.z, box2.min.z)
-    );
-
-    Vec3 newMax(
-        std::max(box1.max.x, box2.max.x),
-        std::max(box1.max.y, box2.max.y),
-        std::max(box1.max.z, box2.max.z)
-    );
-
-    return BoundingBox(newMin, newMax);
 }
