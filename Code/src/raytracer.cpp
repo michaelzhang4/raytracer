@@ -65,8 +65,7 @@ void PhongTracer::renderScene(const Scene& scene, std::vector<Colour>& pixels) c
 
     pixels.resize(camera.width * camera.height);
 
-    // #pragma omp parallel for
-    #pragma omp parallel for schedule(static, 1)
+    #pragma omp parallel for
     for (int y = 0; y < camera.height; ++y) {
         for (int x = 0; x < camera.width; ++x) {
             Ray cameraRay = Ray(camera.position, camera.getRayDirection(x, y));
@@ -109,9 +108,6 @@ Colour PhongTracer::traceRayRecursive(const Scene& scene, const Ray& ray, int bo
     Intersection nearestIntersection;
     nearestIntersection.t = std::numeric_limits<float>::max();
     nearestIntersection.hit = false;
-    // nearestIntersection.hitPoint = Vec3(0, 0, 0);
-    // nearestIntersection.normal = Vec3(0, 0, 0);
-    // nearestIntersection.shape = nullptr;
 
     // Find nearest intersection
     for (const auto& shape : shapes) {
@@ -132,14 +128,14 @@ Colour PhongTracer::traceRayRecursive(const Scene& scene, const Ray& ray, int bo
 
     Colour colour = {0, 0, 0};
 
-    // Get texture coordinates
-    std::pair<float, float> uv = nearestIntersection.shape->getUV(hitPoint);
-    float u = uv.first, v = uv.second;
+
 
     // Sample texture if the material has one
     Colour textureDiffuseColor = material->diffuseColor;
-    // #pragma omp critical
     if (material->texture && material->texture->width > 0) {
+        // Get texture coordinates
+        std::pair<float, float> uv = nearestIntersection.shape->getUV(hitPoint);
+        float u = uv.first, v = uv.second;
         textureDiffuseColor = material->texture->sample(u, v);
     }
     

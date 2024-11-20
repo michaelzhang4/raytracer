@@ -12,8 +12,7 @@ Material::Material(float kd, float ks, int specExp, const Colour& diffuse, const
     : kd(kd), ks(ks), specularExponent(specExp), diffuseColor(diffuse),
       specularColor(specular), isReflective(reflective), reflectivity(reflectivity),
       isRefractive(refractive), refractiveIndex(refractiveIndex) {
-        // texture = nullptr;
-        if (!texturePath.empty()) {
+      if (!texturePath.empty()) {
           texture = std::make_shared<Texture>(texturePath);  // Create a shared pointer
         } else {
           texture = nullptr;  // No texture provided

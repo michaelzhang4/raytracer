@@ -73,15 +73,30 @@ Scene::Scene(const json& jsonData) {
                             std::max({v0.z, v1.z, v2.z})};
                 Vec3 range = maxVec - minVec;
 
-                // Calculate UV coordinates
                 auto calculateUV = [&](const Vec3& v) -> std::pair<float, float> {
-                    return {(v.x - minVec.x) / range.x, (v.y - minVec.y) / range.y};
-                };
+                    // Find the minimum values across all triangles
+                    float minX = std::min({v0.x, v1.x, v2.x});
+                    float minZ = std::min({v0.z, v1.z, v2.z});
 
+                    // Shift all the coordinates to positive space
+                    float shiftedX = v.x - minX;
+                    float shiftedZ = v.z - minZ;
+
+                    // Normalize to [0, 1)
+                    float rangeX = std::max({v0.x - minX, v1.x - minX, v2.x - minX});
+                    float rangeZ = std::max({v0.z - minZ, v1.z - minZ, v2.z - minZ});
+
+                    // Ensure range is not zero to avoid division by zero
+                    rangeX = rangeX == 0 ? 1 : rangeX;
+                    rangeZ = rangeZ == 0 ? 1 : rangeZ;
+
+                    return {shiftedX / rangeX, shiftedZ / rangeZ};
+                };
                 std::pair<float, float> uv0 = calculateUV(v0);
                 std::pair<float, float> uv1 = calculateUV(v1);
                 std::pair<float, float> uv2 = calculateUV(v2);
 
+                std::cout << uv0.first << " " << uv0.second << " " << uv1.first << " " << uv1.second << " " << uv2.first << " " << uv2.second << std::endl;
                 // Add the triangle to the list of shapes
                 shapes.push_back(std::make_shared<Triangle>(v0, v1, v2, uv0, uv1, uv2, material));
             }

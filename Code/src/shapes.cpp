@@ -275,18 +275,21 @@ bool Triangle::intersect(const Ray& ray, Intersection& intersection) const {
     return false;
 }
 
-std::pair<float, float> Triangle::getUV(const Vec3& hitPoint) const {
-    Vec3 barycentric = computeBarycentricCoordinates(hitPoint, v0, v1, v2);
-    float u = barycentric.x * uv0.first + barycentric.y * uv1.first + barycentric.z * uv2.first;
-    float v = barycentric.x * uv0.second + barycentric.y * uv1.second + barycentric.z * uv2.second;
-    return {u, v};
-}
 
 void Triangle::printInfo() const {
     std::cout << "Triangle Info:" << std::endl;
     std::cout << "v0 (x,y,z): " << v0.x << " " << v0.y << " " << v0.z << std::endl;
     std::cout << "v1 (x,y,z): " << v1.x << " " << v1.y << " " << v1.z << std::endl;
     std::cout << "v2 (x,y,z): " << v2.x << " " << v2.y << " " << v2.z << std::endl;
+}
+
+std::pair<float, float> Triangle::getUV(const Vec3& hitPoint) const {
+    Vec3 barycentric = computeBarycentricCoordinates(hitPoint, v0, v1, v2);
+
+    float u = barycentric.x * uv0.first + barycentric.y * uv1.first + barycentric.z * uv2.first;
+    float v = barycentric.x * uv0.second + barycentric.y * uv1.second + barycentric.z * uv2.second;
+
+    return {u, v};
 }
 
 
@@ -298,6 +301,10 @@ Vec3 computeBarycentricCoordinates(const Vec3& p, const Vec3& a, const Vec3& b, 
     float d20 = v2.dot(v0);
     float d21 = v2.dot(v1);
     float denom = d00 * d11 - d01 * d01;
+    // Debug: Check if the triangle is degenerate
+    if (std::abs(denom) < 1e-6) {
+        std::cerr << "Warning: Degenerate triangle encountered in barycentric computation.\n";
+    }
     float v = (d11 * d20 - d01 * d21) / denom;
     float w = (d00 * d21 - d01 * d20) / denom;
     float u = 1.0f - v - w;
