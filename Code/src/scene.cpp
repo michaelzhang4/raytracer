@@ -64,15 +64,6 @@ Scene::Scene(const json& jsonData) {
                 Vec3 v1 = getVec3FromJson(shapeData, "v1", {1, 0, 0});
                 Vec3 v2 = getVec3FromJson(shapeData, "v2", {0, 1, 0});
 
-                // Compute the bounding box of the triangle
-                Vec3 minVec = {std::min({v0.x, v1.x, v2.x}),
-                            std::min({v0.y, v1.y, v2.y}),
-                            std::min({v0.z, v1.z, v2.z})};
-                Vec3 maxVec = {std::max({v0.x, v1.x, v2.x}),
-                            std::max({v0.y, v1.y, v2.y}),
-                            std::max({v0.z, v1.z, v2.z})};
-                Vec3 range = maxVec - minVec;
-
                 auto calculateUV = [&](const Vec3& v) -> std::pair<float, float> {
                     // Find the minimum values across all triangles
                     float minX = std::min({v0.x, v1.x, v2.x});
@@ -96,7 +87,7 @@ Scene::Scene(const json& jsonData) {
                 std::pair<float, float> uv1 = calculateUV(v1);
                 std::pair<float, float> uv2 = calculateUV(v2);
 
-                std::cout << uv0.first << " " << uv0.second << " " << uv1.first << " " << uv1.second << " " << uv2.first << " " << uv2.second << std::endl;
+                // std::cout << uv0.first << " " << uv0.second << " " << uv1.first << " " << uv1.second << " " << uv2.first << " " << uv2.second << std::endl;
                 // Add the triangle to the list of shapes
                 shapes.push_back(std::make_shared<Triangle>(v0, v1, v2, uv0, uv1, uv2, material));
             }

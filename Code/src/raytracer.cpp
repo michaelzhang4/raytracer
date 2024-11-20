@@ -30,7 +30,6 @@ void BinaryTracer::renderScene(const Scene& scene, std::vector<Colour>& pixels) 
                     }
                 }
             }
-
             // Binary mode: set red if any object is hit
             if (hitObject) {
                 pixelColour = Colour(255, 0, 0);  // Red for hit objects

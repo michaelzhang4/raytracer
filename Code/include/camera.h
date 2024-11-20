@@ -25,9 +25,6 @@ public:
     // Generate ray direction based on pixel position
     Vec3 getRayDirection(int pixelX, int pixelY) const;
 
-    // Calculate pixel colour based on render mode
-    Colour calculatePixelColour(const Vec3& rayDirection, const std::string& renderMode) const;
-
     // Print camera specifications
     void printCameraSpecs();
 

@@ -76,10 +76,9 @@ Vec3 Cylinder::getNormal(const Vec3& point) const {
     }
 }
 
-
 bool Cylinder::intersect(const Ray& ray, Intersection& intersection) const {
     Vec3 oc = ray.origin - center;
-    Vec3 axisNorm = axis; // axis is already normalized in constructor
+    Vec3 axisNorm = axis; // Ensure axis is normalized
 
     // Quadratic coefficients for the side surface
     float A = ray.direction.dot(ray.direction) - pow(ray.direction.dot(axisNorm), 2);
@@ -89,6 +88,12 @@ bool Cylinder::intersect(const Ray& ray, Intersection& intersection) const {
     float discriminant = B * B - 4.0f * A * C;
     std::vector<std::pair<float, Vec3>> hits;
 
+    // Lambda to check if a point is within the cylinder's height
+    auto isWithinHeight = [&](const Vec3& point) -> bool {
+        float projection = axisNorm.dot(point - center);
+        return projection >= -height && projection <= height;
+    };
+
     // Check for intersection with the cylindrical surface
     if (discriminant >= 0.0f) {
         float sqrtDisc = std::sqrt(discriminant);
@@ -96,11 +101,6 @@ bool Cylinder::intersect(const Ray& ray, Intersection& intersection) const {
         float t2 = (-B + sqrtDisc) / (2.0f * A);
 
         if (t1 > t2) std::swap(t1, t2);
-
-        auto isWithinHeight = [&](const Vec3& point) -> bool {
-            float projection = axisNorm.dot(point - center);
-            return projection >= -height && projection <= height;
-        };
 
         if (t1 > EPSILON) {
             Vec3 p1 = ray.origin + ray.direction * t1;
@@ -125,8 +125,8 @@ bool Cylinder::intersect(const Ray& ray, Intersection& intersection) const {
         float t_cap_bottom = (capBottomCenter - ray.origin).dot(axisNorm) / denom;
         if (t_cap_bottom > EPSILON) {
             Vec3 p_cap_bottom = ray.origin + ray.direction * t_cap_bottom;
-            float len = (p_cap_bottom - center).length();
-            if (len*len <= radius * radius) {
+            float len = (p_cap_bottom - capBottomCenter).length();
+            if (len * len <= radius * radius) {
                 hits.emplace_back(t_cap_bottom, p_cap_bottom);
             }
         }
@@ -137,7 +137,7 @@ bool Cylinder::intersect(const Ray& ray, Intersection& intersection) const {
         if (t_cap_top > EPSILON) {
             Vec3 p_cap_top = ray.origin + ray.direction * t_cap_top;
             float len = (p_cap_top - capTopCenter).length();
-            if ( len*len <= radius * radius) {
+            if (len * len <= radius * radius) {
                 hits.emplace_back(t_cap_top, p_cap_top);
             }
         }
@@ -186,31 +186,51 @@ std::pair<float, float> Cylinder::getUV(const Vec3& hitPoint) const {
     Vec3 hitToCenter = hitPoint - center;
     float projection = hitToCenter.dot(axis); // Distance along the axis
 
-    // Handle UV mapping based on whether hitPoint is on the side or caps
+    // Side surface UV mapping
     if (projection >= 0.0f && projection <= height) {
-        // SIDE SURFACE
         // Remove the axis component to get the point on the circular cross-section
         Vec3 circularPoint = hitToCenter - axis * projection;
 
-        // Calculate angle for 'u'
-        float u = 0.5f + atan2(circularPoint.z, circularPoint.x) / (2.0f * M_PI);
+        // Calculate angle for 'u' (normalized from 0 to 1)
+        float angle = atan2(circularPoint.z, circularPoint.x);
+        // Normalize angle to [0, 1]
+        float u = (angle < 0.0f ? (angle + 2.0f * M_PI) : angle) / (2.0f * M_PI);
 
-        // Calculate 'v' based on height
-        float v = projection / height;
+        // Calculate 'v' based on height, mapping to [0.25, 0.75]
+        float v = 0.25f + (projection / height) * 0.5f;
 
         return {u, v};
-    } else {
-        // CAPS
-        Vec3 capCenter = (projection < 0.0f) ? center : (center + axis * height);
+    } 
+    else {
+        // For caps, determine if it's the bottom or top cap
+        bool isBottomCap = projection < 0.0f;
+        Vec3 capCenter = isBottomCap ? center : (center + axis * height);
         Vec3 capToPoint = hitPoint - capCenter;
 
-        // Convert to polar coordinates
-        float u = 0.5f + atan2(capToPoint.z, capToPoint.x) / (2.0f * M_PI);
-        float v = std::sqrt(capToPoint.x * capToPoint.x + capToPoint.z * capToPoint.z) / radius;
+        // Convert to polar coordinates for the caps
+        float angle = atan2(capToPoint.z, capToPoint.x);
+        // Normalize angle to [0, 1]
+        float u = (angle < 0.0f ? (angle + 2.0f * M_PI) : angle) / (2.0f * M_PI);
+
+        // Radial distance normalized to [0, 1]
+        float radial = std::sqrt(capToPoint.x * capToPoint.x + capToPoint.z * capToPoint.z) / radius;
+        // Clamp radial to [0, 1] to avoid stretching
+        radial = std::min(std::max(radial, 0.0f), 1.0f);
+
+        // Calculate 'v' based on whether it's the bottom or top cap
+        float v;
+        if (isBottomCap) {
+            // Bottom cap maps to [0.0, 0.25]
+            v = radial * 0.25f;
+        } else {
+            // Top cap maps to [0.75, 1.0]
+            v = radial * 0.25f + 0.75f;
+        }
 
         return {u, v};
     }
 }
+
 
 void Cylinder::printInfo() const {
     std::cout << "Cylinder Info:" << std::endl;

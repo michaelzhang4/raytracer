@@ -14,20 +14,6 @@ Vec3 Camera::getRayDirection(int pixelX, int pixelY) const {
     return (forward + right * ndcX + cameraUp * ndcY).normalise();
 }
 
-Colour Camera::calculatePixelColour(const Vec3& rayDirection, const std::string& renderMode) const {
-    if (renderMode == "binary") {
-        return rayDirection.z > 0 ? Colour(255, 255, 255) : Colour(0, 0, 0);  // Simple binary colour
-    } else if (renderMode == "phong") {
-        Vec3 lightDir = {1.0f, 1.0f, -1.0f};
-        lightDir = lightDir.normalise();
-        float intensity = std::max(0.0f, rayDirection.dot(lightDir));
-        int grey = static_cast<int>(intensity * 255);
-        return Colour(grey, grey, grey);  // Phong-like shading
-    } else {
-        throw std::runtime_error("Unknown render mode");
-    }
-}
-
 void Camera::printCameraSpecs() {
     std::cout << "Camera Info:" << std::endl;
     std::cout << "position (x,y,z): " << position.x << " " << position.y << " " << position.z << std::endl;
