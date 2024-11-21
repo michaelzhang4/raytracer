@@ -3,6 +3,7 @@
 
 #include "common.h"
 #include "helpers.h"
+#include "brdf.h"
 
 class Scene;
 

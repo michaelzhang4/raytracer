@@ -128,6 +128,11 @@ Colour Colour::operator/(float scalar) const {
     );
 }
 
+Colour Colour::operator-(const Colour& other) const {
+    return Colour(r - other.r, g - other.g, b - other.b);
+}
+
+
 Ray::Ray(const Vec3& origin, const Vec3& direction)
     : origin(origin), direction(direction.normalise()) {}
 

@@ -63,6 +63,7 @@ struct Colour {
     Colour operator*(const Colour& other) const;
     Colour operator+(const Colour& other) const;
     Colour operator/(float scalar) const;
+    Colour operator-(const Colour& other) const;
 };
 
 class Ray {
