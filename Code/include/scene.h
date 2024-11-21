@@ -8,6 +8,7 @@
 #include "parser.h"
 #include "tonemap.h"
 #include "bvh.h"
+#include "light.h"
 
 // Scene class
 class Scene {
@@ -19,7 +20,7 @@ public:
     std::shared_ptr<Camera> getCamera() const { return camera; }
     const Colour& getBackgroundColour() const { return backgroundColour; }
     const std::vector<std::shared_ptr<Shape>>& getShapes() const { return shapes; }
-    const std::vector<Light>& getLights() const { return lights; }
+    const std::vector<std::shared_ptr<Light>>& getLights() const { return lights; }
     const RenderMode& getRenderMode() const { return renderMode; }
     int getBounces() const { return nbounces; }
     float getExposure() const { return camera->exposure; }
@@ -29,7 +30,7 @@ private:
     std::shared_ptr<Camera> camera;
     Colour backgroundColour;
     std::vector<std::shared_ptr<Shape>> shapes;
-    std::vector<Light> lights;
+    std::vector<std::shared_ptr<Light>> lights;
     RenderMode renderMode;
     BVH bvh;
 };

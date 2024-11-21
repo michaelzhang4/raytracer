@@ -102,7 +102,7 @@ Colour PhongTracer::traceRayRecursive(const Scene& scene, const Ray& ray, int bo
     }
 
     const auto& shapes = scene.getShapes();
-    const auto& lights = scene.getLights();
+    const auto lights = scene.getLights();
     std::shared_ptr<Camera> camera = scene.getCamera();
 
     Intersection nearestIntersection;
@@ -136,14 +136,14 @@ Colour PhongTracer::traceRayRecursive(const Scene& scene, const Ray& ray, int bo
 
     // Light contributions
     for (const auto& light : lights) {
-        Vec3 lightDir = (light.position - hitPoint).normalise();
+        Vec3 lightDir = (light->position - hitPoint).normalise();
 
         // Shadow ray
         Ray shadowRay(hitPoint + normal * 0.00001f, lightDir);
         bool inShadow = false;
 
         // Calculate distance to light
-        float lightDistance = (light.position - hitPoint).length();
+        float lightDistance = (light->position - hitPoint).length();
         float shadowFactor = 0.1f;
 
         // Check for occlusion
@@ -156,10 +156,10 @@ Colour PhongTracer::traceRayRecursive(const Scene& scene, const Ray& ray, int bo
         }
 
         if (!inShadow) {
-            shadowFactor = 1.0f;
+            float lightIntensity = (light->intensity.r + light->intensity.g + light->intensity.b) / 3.0f;
+            shadowFactor = std::clamp(lightIntensity / 255.0f, 0.0f, 1.0f);
         }
 
-        // Adjust ambient light based on whether the point is in shadow
         // Diffuse lighting
         float diffuseIntensity = std::max(0.0f, normal.dot(lightDir));
         Colour diffuse = textureDiffuseColor * diffuseIntensity * material->kd;
@@ -326,47 +326,79 @@ Colour PathTracer::traceRayRecursive(const Scene& scene, const Ray& ray, int bou
         textureDiffuseColor = material->texture->sample(u, v);
     }
     
-
-    // Light contributions
+        // Iterate over the lights in the scene
     for (const auto& light : lights) {
-        Vec3 lightDir = (light.position - hitPoint).normalise();
+        // Attempt to cast the light to an AreaLight
+        auto areaLight = std::dynamic_pointer_cast<AreaLight>(light);
 
-        // Shadow ray
-        Ray shadowRay(hitPoint + normal * 0.00001f, lightDir);
-        bool inShadow = false;
+        if (areaLight) {
+            // Assuming the light is an AreaLight and has the properties: position, u, v, width, height, and intensity
+            const Vec3& lightPosition = light->position;
+            const Vec3& lightU = areaLight->u;
+            const Vec3& lightV = areaLight->v;
+            float lightWidth = areaLight->width;
+            float lightHeight = areaLight->height;
+            const Colour& lightIntensity = light->intensity;
 
-        // Calculate distance to light
-        float lightDistance = (light.position - hitPoint).length();
-        float shadowFactor = 0.1f;
+            int samples = 8; // Number of samples per light (can be adjusted for better quality)
+            Colour lightContribution = {0, 0, 0};
+            float lightArea = lightWidth * lightHeight;
 
-        // Check for occlusion
-        for (const auto& shape : shapes) {
-            Intersection shadowIntersection;
-            if (shape->intersect(Ray(shadowRay.origin, shadowRay.direction), shadowIntersection) && shadowIntersection.t > 0.0001f && shadowIntersection.t < lightDistance) {
-                inShadow = true;
-                break;
+            // Sample light multiple times for area-based lighting
+            for (int i = 0; i < samples; ++i) {
+                // Generate a random sample point on the light surface
+                float randU = generateRandomNumber(0.0f, 1.0f); // Uniform random value [0, 1]
+                float randV = generateRandomNumber(0.0f, 1.0f); // Uniform random value [0, 1]
+                Vec3 lightSamplePoint = lightPosition + lightU * (randU - 0.5f) * lightWidth + lightV * (randV - 0.5f) * lightHeight;
+
+                Vec3 lightDir = (lightSamplePoint - hitPoint).normalise();
+                float lightDistance = (lightSamplePoint - hitPoint).length();
+
+                // Shadow ray with small offset to avoid self-intersection
+                const float epsilon = 1e-4f;
+                Ray shadowRay(hitPoint + normal * epsilon, lightDir);
+
+                // Check for occlusion using the shadow ray
+                bool inShadow = false;
+                // Check for occlusion
+                for (const auto& shape : shapes) {
+                    Intersection shadowIntersection;
+                    if (shape->intersect(Ray(shadowRay.origin, shadowRay.direction), shadowIntersection) && shadowIntersection.t > 0.0001f && shadowIntersection.t < lightDistance) {
+                        inShadow = true;
+                        break;
+                    }
+                }
+
+                if (!inShadow) {
+                    // Compute the contribution from this sample
+                    Vec3 viewDir = (camera->position - hitPoint).normalise(); // Calculate view direction
+
+                    // Diffuse lighting (Lambertian model)
+                    float diffuseFactor = std::max(0.0f, normal.dot(lightDir));
+                    Colour diffuse = lightIntensity * diffuseFactor / (lightDistance * lightDistance);  // Attenuation by distance
+
+                    // Specular lighting (Blinn-Phong reflection model)
+                    Vec3 halfVector = (lightDir + viewDir).normalise(); // Halfway vector for specular reflection
+                    float shininess = 16.0f; // Specular shininess factor (this can be adjusted)
+                    float specularFactor = std::pow(std::max(0.0f, normal.dot(halfVector)), shininess); // Blinn-Phong specular
+                    Colour specular = lightIntensity * specularFactor / (lightDistance * lightDistance);  // Attenuation by distance
+
+                    // Combine the diffuse and specular contributions
+                    Colour sampleContribution = (diffuse + specular) * (1.0f / lightArea); // Normalize by light area
+                    lightContribution = lightContribution + sampleContribution;  // Add to accumulated light contribution
+                }
             }
+
+            // Average the contribution over all samples
+            lightContribution = lightContribution / static_cast<float>(samples);
+
+            // Add to the final colour
+            colour = colour + lightContribution;
         }
-
-        if (!inShadow) {
-            shadowFactor = 1.0f;
-        }
-
-        // Adjust ambient light based on whether the point is in shadow
-        // Diffuse lighting
-        float diffuseIntensity = std::max(0.0f, normal.dot(lightDir));
-        Colour diffuse = textureDiffuseColor * diffuseIntensity * material->kd;
-        
-        // Specular lighting
-        Vec3 viewDir = (camera->position - hitPoint).normalise();
-        Vec3 halfVector = (lightDir + viewDir).normalise();
-        float specularIntensity = std::pow(std::max(0.0f, normal.dot(halfVector)), material->specularExponent);
-        
-        // specular constant
-        Colour specular = material->specularColor * specularIntensity * material->ks * 0.4f;
-
-        colour = colour + (diffuse + specular) * shadowFactor;   
     }
+
+
+
 
     // Adjust illumination of the scene (ambient lighting)
     Colour globalIllumination = textureDiffuseColor  * 0.25f;
@@ -418,12 +450,4 @@ Colour PathTracer::traceRayRecursive(const Scene& scene, const Ray& ray, int bou
         }
     }
     return colour;
-}
-
-float generateRandomNumber(float min, float max) {
-    // Thread-local random engine
-    thread_local std::mt19937 generator(std::random_device{}());
-    std::uniform_real_distribution<float> distribution(min, max);
-
-    return distribution(generator);
 }

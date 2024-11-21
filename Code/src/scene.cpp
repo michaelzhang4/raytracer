@@ -25,14 +25,17 @@ Scene::Scene(const json& jsonData) {
 
     
     // Check for camera type
-    if (cameraType == "aperture") {
+    if (renderMode == RenderMode::BINARY) {
+        std::cout << "Using pinhole camera." << std::endl;
+        camera = std::make_shared<PinholeCamera>(cameraPos, cameraLookAt, cameraUp, width, height, fov, exposure, aspectRatio); 
+    } else if (renderMode == RenderMode::PHONG) {
+        std::cout << "Using pinhole camera." << std::endl;
+        camera = std::make_shared<PinholeCamera>(cameraPos, cameraLookAt, cameraUp, width, height, fov, exposure, aspectRatio); 
+    } else if (renderMode == RenderMode::PATH) {
         std::cout << "Using aperature camera." << std::endl;
         float apertureSize = jsonCamera.value("apertureSize", 0.01f);
         float focalDistance = jsonCamera.value("focalDistance", 2.0f);
         camera = std::make_shared<ApertureCamera>(cameraPos, cameraLookAt, cameraUp, width, height, fov, exposure, aspectRatio, apertureSize, focalDistance);
-    } else {
-        std::cout << "Using pinhole camera." << std::endl;
-        camera = std::make_shared<PinholeCamera>(cameraPos, cameraLookAt, cameraUp, width, height, fov, exposure, aspectRatio); 
     }
 
     // Parse background color
@@ -42,9 +45,30 @@ Scene::Scene(const json& jsonData) {
     // Parse lights
     if (jsonScene.contains("lightsources") && jsonScene["lightsources"].is_array()) {
         for (const auto& lightData : jsonScene["lightsources"]) {
+            // Extract type
+            std::string type = lightData.value("type", "");
+
+            // Parse position and intensity
             Vec3 position = getVec3FromJson(lightData, "position", {0, 0, 0});
             Colour intensity = getColourFromJson(lightData, "intensity", Colour(255, 255, 255));
-            lights.emplace_back(position, intensity);
+
+            if (renderMode == RenderMode::BINARY) {
+                // Create a PointLight
+                std::cout << "Using pointlights." << std::endl;
+                lights.emplace_back(std::make_shared<PointLight>(position, intensity));  
+            } else if (renderMode == RenderMode::PHONG){
+                std::cout << "Using pointlights." << std::endl;
+                lights.emplace_back(std::make_shared<PointLight>(position, intensity));
+            } else if (renderMode == RenderMode::PATH) {
+                std::cout << "Using area lights." << std::endl;
+                Vec3 u = getVec3FromJson(lightData, "u", {1, 0, 0});  // Default to x-axis
+                Vec3 v = getVec3FromJson(lightData, "v", {0, 1, 0});  // Default to y-axis
+                float width = lightData.value("width", 1.0f);
+                float height = lightData.value("height", 1.0f);
+                lights.emplace_back(std::make_shared<AreaLight>(position, intensity, u, v, width, height));
+            } else {
+                std::cerr << "Unknown light type: " << type << std::endl;
+            }
         }
     }
 

@@ -65,15 +65,6 @@ struct Colour {
     Colour operator/(float scalar) const;
 };
 
-struct Light {
-    Vec3 position;
-    Colour intensity;  // RGB intensity of the light
-    Light(const Vec3& pos, const Colour& intensity) : position(pos), intensity(intensity) {}
-    float kc = 1.0f;   // Constant attenuation factor
-    float kl = 0.1f;   // Linear attenuation factor
-    float kq = 0.01f;  // Quadratic attenuation factor
-};
-
 class Ray {
 public:
     Vec3 origin;

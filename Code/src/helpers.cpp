@@ -65,9 +65,10 @@ RenderMode stringToRenderMode(const std::string& mode) {
     }
 }
 
-// Utility to generate random points
-float randomFloat() {
-    static std::mt19937 rng(std::random_device{}());
-    static std::uniform_real_distribution<float> dist(0.0f, 1.0f);
-    return dist(rng);
+float generateRandomNumber(float min, float max) {
+    // Thread-local random engine
+    thread_local std::mt19937 generator(std::random_device{}());
+    std::uniform_real_distribution<float> distribution(min, max);
+
+    return distribution(generator);
 }

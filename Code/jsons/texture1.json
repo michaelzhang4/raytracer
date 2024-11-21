@@ -3,7 +3,7 @@
     "rendermode":"pathtracer",
     "camera":
         { 
-            "type":"aperture", 
+            "type":"pinhole", 
             "width":1200, 
             "height":800,
             "position":[-1, 1.0, -1.5],
