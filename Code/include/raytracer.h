@@ -14,7 +14,7 @@ public:
     virtual void renderScene(const Scene& scene, std::vector<Colour>& pixels) const = 0;
 };
 
-// BinaryTracer for simple hit testing
+// BinaryTracer
 class BinaryTracer : public RayTracer {
 public:
     void renderScene(const Scene& scene, std::vector<Colour>& pixels) const override;
@@ -27,19 +27,16 @@ public:
     Colour traceRayRecursive(const Scene& scene, const Ray& ray, int bounce) const;
 };
 
-// // PathTracer for global illumination
-// class PathTracer : public RayTracer {
-// public:
-//     void renderScene(const Scene& scene, std::vector<Colour>& pixels) const override {
-//         // Implement path tracing logic here
-//         std::cout << "Rendering with PathTracer..." << std::endl;
-//     }
+// PathTracer for advanced features
+class PathTracer : public RayTracer {
+public:
+    void renderScene(const Scene& scene, std::vector<Colour>& pixels) const override;
+    Colour tracePixel(const Scene& scene, int x, int y) const;
+    Colour traceRayRecursive(const Scene& scene, const Ray& ray, int bounce) const;
 
-//     void printTracerInfo() const override {
-//         std::cout << "Path Tracer (Global Illumination)" << std::endl;
-//     }
-// };
+};
 
 float fresnel(const Vec3& I, const Vec3& N, float eta);
+float generateRandomNumber(float min, float max);
 
 #endif // RAYTRACER_H

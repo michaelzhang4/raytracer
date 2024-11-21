@@ -2,9 +2,9 @@
 
 // Default constructor
 Material::Material()
-    : kd(0.8f), ks(0.2f), specularExponent(10), diffuseColor({255, 255, 255}),
-      specularColor({255, 255, 255}), isReflective(false), reflectivity(0.0f),
-      isRefractive(false), refractiveIndex(1.0f), texture(nullptr) {}
+    : kd(0.8f), ks(0.2f), specularExponent(2), diffuseColor({255, 0, 0}),
+      specularColor({255, 0, 0}), isReflective(false), reflectivity(0.0f),
+      isRefractive(false), refractiveIndex(0.0f), texture(nullptr) {}
 
 // Parameterized constructor
 Material::Material(float kd, float ks, int specExp, const Colour& diffuse, const Colour& specular,

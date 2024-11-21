@@ -16,17 +16,17 @@ public:
     void renderScene(std::vector<Colour>& pixels);
     void printSceneInfo();
     std::pair<int, int> sceneWidthHeight();
-    const Camera& getCamera() const { return camera; }
+    std::shared_ptr<Camera> getCamera() const { return camera; }
     const Colour& getBackgroundColour() const { return backgroundColour; }
     const std::vector<std::shared_ptr<Shape>>& getShapes() const { return shapes; }
     const std::vector<Light>& getLights() const { return lights; }
     const RenderMode& getRenderMode() const { return renderMode; }
     int getBounces() const { return nbounces; }
-    float getExposure() const { return camera.exposure; }
+    float getExposure() const { return camera->exposure; }
     bool intersect(const Ray& ray, Intersection& nearestIntersection) const;
 private:
     int nbounces;
-    Camera camera;
+    std::shared_ptr<Camera> camera;
     Colour backgroundColour;
     std::vector<std::shared_ptr<Shape>> shapes;
     std::vector<Light> lights;

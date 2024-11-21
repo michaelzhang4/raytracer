@@ -89,6 +89,10 @@
         "memory_resource": "cpp",
         "string_view": "cpp",
         "numbers": "cpp",
-        "cinttypes": "cpp"
+        "cinttypes": "cpp",
+        "condition_variable": "cpp",
+        "coroutine": "cpp",
+        "resumable": "cpp",
+        "future": "cpp"
     }
 }

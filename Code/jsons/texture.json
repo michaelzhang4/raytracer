@@ -1,6 +1,6 @@
 {
     "nbounces":8, 
-    "rendermode":"phong",
+    "rendermode":"pathtracer",
     "camera":
         { 
             "type":"pinhole", 

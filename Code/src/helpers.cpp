@@ -58,7 +58,16 @@ RenderMode stringToRenderMode(const std::string& mode) {
         return RenderMode::BINARY;
     } else if (mode == "phong") {
         return RenderMode::PHONG;
+    } else if (mode == "pathtracer") {
+        return RenderMode::PATH;
     } else {
         throw std::runtime_error("Unsupported render mode: " + mode);
     }
+}
+
+// Utility to generate random points
+float randomFloat() {
+    static std::mt19937 rng(std::random_device{}());
+    static std::uniform_real_distribution<float> dist(0.0f, 1.0f);
+    return dist(rng);
 }

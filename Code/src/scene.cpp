@@ -13,6 +13,7 @@ Scene::Scene(const json& jsonData) {
 
     // Parse camera
     json jsonCamera = jsonData.at("camera");
+    std::string cameraType = jsonCamera.value("type", "pinhole");
     Vec3 cameraPos = getVec3FromJson(jsonCamera, "position", {0.0f, 0.0f, 0.0f});
     Vec3 cameraLookAt = getVec3FromJson(jsonCamera, "lookAt", {0.0f, 0.0f, -1.0f});
     Vec3 cameraUp = getVec3FromJson(jsonCamera, "upVector", {0.0f, 1.0f, 0.0f});
@@ -21,7 +22,18 @@ Scene::Scene(const json& jsonData) {
     float fov = jsonCamera.value("fov", 90.0f);
     float exposure = jsonCamera.value("exposure", 0.1f);
     float aspectRatio = static_cast<float>(width) / height;
-    camera = Camera(cameraPos, cameraLookAt, cameraUp, width, height, fov, exposure, aspectRatio);
+
+    
+    // Check for camera type
+    if (cameraType == "aperture") {
+        std::cout << "Using aperature camera." << std::endl;
+        float apertureSize = jsonCamera.value("apertureSize", 0.01f);
+        float focalDistance = jsonCamera.value("focalDistance", 2.0f);
+        camera = std::make_shared<ApertureCamera>(cameraPos, cameraLookAt, cameraUp, width, height, fov, exposure, aspectRatio, apertureSize, focalDistance);
+    } else {
+        std::cout << "Using pinhole camera." << std::endl;
+        camera = std::make_shared<PinholeCamera>(cameraPos, cameraLookAt, cameraUp, width, height, fov, exposure, aspectRatio); 
+    }
 
     // Parse background color
     json jsonScene = jsonData.at("scene");
@@ -114,9 +126,9 @@ void Scene::renderScene(std::vector<Colour>& pixels) {
         case RenderMode::PHONG:
             rayTracer = std::make_shared<PhongTracer>();
             break;
-        // case RenderMode::PATH:
-        //     rayTracer = std::make_shared<PathTracer>();
-        //     break;
+        case RenderMode::PATH:
+            rayTracer = std::make_shared<PathTracer>();
+            break;
         default:
             std::cerr << "Unknown render mode. Defaulting to BinaryTracer" << std::endl;
             rayTracer = std::make_shared<BinaryTracer>();
@@ -128,7 +140,7 @@ void Scene::renderScene(std::vector<Colour>& pixels) {
 }
 
 void Scene::printSceneInfo() {
-    camera.printCameraSpecs();
+    camera->printCameraSpecs();
     std::cout << "Background colour (r,g,b): " << backgroundColour.r <<" "<< backgroundColour.g << " " << backgroundColour.b <<std::endl;
     for (const auto& shape: shapes) {
         std::cout << std::endl;
@@ -143,5 +155,5 @@ void Scene::printSceneInfo() {
 }
 
 std::pair<int, int> Scene::sceneWidthHeight() {
-    return {camera.width, camera.height};
+    return {camera->width, camera->height};
 }

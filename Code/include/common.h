@@ -11,6 +11,7 @@
 #include <fstream>
 #include <limits>
 #include <filesystem>
+#include <random>
 #include "utilities.h"
 
 #include "../external/nlohmann/json.hpp"
