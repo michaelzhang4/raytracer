@@ -53,14 +53,10 @@ Scene::Scene(const json& jsonData) {
             Colour intensity = getColourFromJson(lightData, "intensity", Colour(255, 255, 255));
 
             if (renderMode == RenderMode::BINARY) {
-                // Create a PointLight
-                std::cout << "Using pointlights." << std::endl;
                 lights.emplace_back(std::make_shared<PointLight>(position, intensity));  
             } else if (renderMode == RenderMode::PHONG){
-                std::cout << "Using pointlights." << std::endl;
                 lights.emplace_back(std::make_shared<PointLight>(position, intensity));
             } else if (renderMode == RenderMode::PATH) {
-                std::cout << "Using area lights." << std::endl;
                 Vec3 u = getVec3FromJson(lightData, "u", {1, 0, 0});  // Default to x-axis
                 Vec3 v = getVec3FromJson(lightData, "v", {0, 1, 0});  // Default to y-axis
                 float width = lightData.value("width", 1.0f);

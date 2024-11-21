@@ -3,7 +3,7 @@
 
 #include "utilities.h"
 #include "helpers.h"
-
+#include "material.h"
 
 class Light {
 public:
@@ -19,7 +19,6 @@ public:
     // Pure virtual methods for sampling and PDF
     virtual Vec3 samplePoint() const = 0; // Sample a point on the light
     virtual float pdf() const = 0; // PDF for light sampling
-    virtual Colour computeIllumination(const Vec3& point, const Vec3& normal, const Vec3& viewDir) const = 0;
 };
 
 // Point Light Class (Derived from Light)
@@ -31,7 +30,6 @@ public:
     // Override base class methods
     Vec3 samplePoint() const override;
     float pdf() const override;
-    Colour computeIllumination(const Vec3& point, const Vec3& normal, const Vec3& viewDir) const override;
 };
 
 // Area Light Class (Derived from Light)
@@ -46,7 +44,6 @@ public:
     // Override base class methods
     Vec3 samplePoint() const override;
     float pdf() const override;
-    Colour computeIllumination(const Vec3& point, const Vec3& normal, const Vec3& viewDir) const override;
 };
 
 

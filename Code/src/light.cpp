@@ -18,23 +18,6 @@ float PointLight::pdf() const {
     return 1.0f;
 }
 
-// Compute illumination from the point light
-Colour PointLight::computeIllumination(const Vec3& point, const Vec3& normal, const Vec3& viewDir) const {
-    Vec3 lightDir = (position - point).normalise();
-
-    // Diffuse contribution
-    float diffuseFactor = std::max(0.0f, normal.dot(lightDir));
-    Colour diffuse = intensity * diffuseFactor;
-
-    // Specular contribution (Blinn-Phong example)
-    Vec3 halfVector = (lightDir + viewDir).normalise();
-    float specularFactor = std::pow(std::max(0.0f, normal.dot(halfVector)), 16.0f);
-    Colour specular = intensity * specularFactor;
-
-    // Return combined contribution
-    return diffuse + specular;
-}
-
 // Area Light Implementation
 AreaLight::AreaLight(const Vec3& position, const Colour& intensity, const Vec3& u, const Vec3& v, float width, float height)
     : Light(position, intensity), u(u), v(v), width(width), height(height) {}
@@ -57,23 +40,4 @@ float AreaLight::pdf() const {
         return 1.0f; // Default fallback
     }
     return 1.0f / (width * height);
-}
-
-Colour AreaLight::computeIllumination(const Vec3& point, const Vec3& normal, const Vec3& viewDir) const {
-    Vec3 sample = samplePoint();
-    Vec3 lightDir = (sample - point).normalise();
-    float distanceSquared = (sample - point).length() * (sample - point).length();
-
-    // Diffuse contribution
-    float diffuseFactor = std::max(0.0f, normal.dot(lightDir));
-    Colour diffuse = intensity * diffuseFactor / distanceSquared;
-
-    // Specular contribution (Blinn-Phong)
-    Vec3 halfVector = (lightDir + viewDir).normalise();
-    float shininess = 16.0f; // Replace with a parameter if needed
-    float specularFactor = std::pow(std::max(0.0f, normal.dot(halfVector)), shininess);
-    Colour specular = intensity * specularFactor / distanceSquared;
-
-    // Return combined contribution, scaled by area size
-    return (diffuse + specular) / (width * height);
 }
