@@ -246,7 +246,7 @@ void PathTracer::renderScene(const Scene& scene, std::vector<Colour>& pixels) co
     // Optimise photon map, build k-d tree
     photonMap.build();
 
-    photonMap.printDebugInfo();
+    // photonMap.printDebugInfo();
 
     #pragma omp parallel for
     for (int y = 0; y < camera->height; ++y) {
@@ -361,7 +361,7 @@ void PathTracer::emitPhotons(const Scene& scene, PhotonMap& photonMap, int numPh
 
 Colour PathTracer::gatherCaustics(const PhotonMap& photonMap, const Vec3& position, float radius) const {
     auto photons = photonMap.query(position, radius);
-    Colour caustics(0, 0, 0);
+    Colour caustics(0.0f, 0.0f, 0.0f);
 
     // Check if no photons were gathered
     if (photons.empty()) {
@@ -381,10 +381,14 @@ Colour PathTracer::gatherCaustics(const PhotonMap& photonMap, const Vec3& positi
 
     // Normalise the result by query area
     caustics = caustics * normalisationFactor;
-    std::cout << caustics.r << " " << caustics.g << " " << caustics.b << std::endl;
+    // std::cout << caustics.r << " " << caustics.g << " " << caustics.b << std::endl;
 
     // Clamp final colour values to prevent overflows
     caustics.clamp(); 
+
+    // Limit the maximum contribution from caustics
+    float maxIndirectIllumination = 0.02f; // Cap for indirect illumination
+    caustics = caustics * maxIndirectIllumination;
 
     return caustics; // Normalize by query area
 }
@@ -540,49 +544,17 @@ Colour PathTracer::traceRayRecursive(const Scene& scene, const Ray& ray, int bou
     // colour = colour + globalIllumination;
 
 
-    // if (!material->isReflective && !material->isRefractive) {
-    //     // Gather indirect light from photon map
-    //     float searchRadius = 0.1f; // Adjust based on scene scale
-    //     Colour indirectIllumination = gatherCaustics(photonMap, hitPoint, searchRadius);
+    if (!material->isReflective && !material->isRefractive) {
+        // Gather indirect light from photon map
+        float searchRadius = 0.1f; // Adjust based on scene scale
+        Colour indirectIllumination = gatherCaustics(photonMap, hitPoint, searchRadius);
+        indirectIllumination.clamp(); // Ensure valid range
 
-    //     // Combine with direct illumination
-    //     Colour directIllumination = Colour(0.0f, 0.0f, 0.0f);
-    //     for (const auto& light : lights) {
-    //         if (auto areaLight = std::dynamic_pointer_cast<AreaLight>(light)) {
-    //             Vec3 lightSamplePoint = areaLight->samplePoint();
-    //             Vec3 lightDir = (lightSamplePoint - hitPoint).normalise();
-    //             float lightDistance = (lightSamplePoint - hitPoint).length();
+        // Add indirect illumination to final colour
+        colour = colour + indirectIllumination;
+        colour.clamp(); // Final clamping
+    }
 
-    //             // Shadow ray to check occlusion
-    //             const float epsilon = 1e-4f;
-    //             Ray shadowRay(hitPoint + normal * epsilon, lightDir);
-    //             Intersection shadowIntersection;
-
-    //             bool inShadow = scene.intersect(shadowRay, shadowIntersection) &&
-    //                             shadowIntersection.t > 0.0001f &&
-    //                             shadowIntersection.t < lightDistance;
-
-    //             if (!inShadow) {
-    //                 // Calculate diffuse contribution
-    //                 float diffuseFactor = std::max(0.0f, normal.dot(lightDir));
-    //                 Colour diffuseContribution = material->diffuseColor * diffuseFactor * areaLight->intensity;
-
-    //                 // Calculate specular contribution
-    //                 Vec3 viewDir = (scene.getCamera()->position - hitPoint).normalise();
-    //                 Vec3 reflectDir = (normal * (2.0f * normal.dot(lightDir)) - lightDir).normalise();
-    //                 float specularFactor = std::pow(std::max(0.0f, viewDir.dot(reflectDir)), material->specularExponent);
-    //                 Colour specularContribution = material->specularColor * specularFactor * areaLight->intensity;
-
-    //                 // Add contributions to direct illumination
-    //                 directIllumination = directIllumination + (diffuseContribution + specularContribution);
-    //             }
-    //         }
-    //     }
-
-    //     // Add direct and indirect illumination to final colour
-    //     colour = directIllumination + indirectIllumination;
-    //     return colour;
-    // }
 
     // === Russian Roulette for Indirect Rays ===
     if (bounce > 2) { // Apply after 2 bounces
