@@ -32,9 +32,9 @@ void BinaryTracer::renderScene(const Scene& scene, std::vector<Colour>& pixels) 
             }
             // Binary mode: set red if any object is hit
             if (hitObject) {
-                pixelColour = Colour(255, 0, 0);  // Red for hit objects
+                pixelColour = Colour(255.0f, 0.0f, 0.0f);  // Red for hit objects
             } else {
-                pixelColour = Colour(0, 0, 0);  // Black otherwise
+                pixelColour = Colour(0.0f, 0.0f, 0.0f);  // Black otherwise
             }
             pixels[y * camera->width + x] = pixelColour;
         }
@@ -122,7 +122,7 @@ Colour PhongTracer::traceRayRecursive(const Scene& scene, const Ray& ray, int bo
 
     std::shared_ptr<Material> material = nearestIntersection.shape->getMaterial();
 
-    Colour colour = {0, 0, 0};
+    Colour colour(0.0f, 0.0f, 0.0f);;
 
 
 
@@ -159,7 +159,7 @@ Colour PhongTracer::traceRayRecursive(const Scene& scene, const Ray& ray, int bo
 
         if (!inShadow) {
             float lightIntensity = (light->intensity.r + light->intensity.g + light->intensity.b) / 3.0f;
-            shadowFactor = std::clamp(lightIntensity / 255.0f, 0.0f, 1.0f);
+            shadowFactor = std::clamp(lightIntensity, 0.0f, 1.0f);
         }
 
         // Diffuse lighting
@@ -237,11 +237,22 @@ void PathTracer::renderScene(const Scene& scene, std::vector<Colour>& pixels) co
 
     pixels.resize(camera->width * camera->height);
 
+    // === Photon Emission Phase ===
+    PhotonMap photonMap;
+    int numPhotons = 100000;
+    emitPhotons(scene, photonMap, numPhotons);
+
+
+    // Optimise photon map, build k-d tree
+    photonMap.build();
+
+    photonMap.printDebugInfo();
+
     #pragma omp parallel for
     for (int y = 0; y < camera->height; ++y) {
         for (int x = 0; x < camera->width; ++x) {
             // Pixel sampling / anti-aliasing
-            Colour pixelColour = tracePixel(scene, x, y);
+            Colour pixelColour = tracePixel(scene, x, y, photonMap);
 
             // Apply tone mapping to the final pixel before storage
             pixelColour = linearToneMap(pixelColour, exposure);
@@ -264,10 +275,11 @@ void PathTracer::renderScene(const Scene& scene, std::vector<Colour>& pixels) co
 }
 
 // Pixel sampling!
-Colour PathTracer::tracePixel(const Scene& scene, int x, int y) const {
+Colour PathTracer::tracePixel(const Scene& scene, int x, int y, const PhotonMap& photonMap) const {
     std::shared_ptr<Camera> camera = scene.getCamera();
     int samplesPerPixel = 8; // Number of samples per pixel
-    Colour accumulatedColour = {0, 0, 0};
+    Colour accumulatedColour(0, 0, 0);
+
 
     for (int i = 0; i < samplesPerPixel; ++i) {
         // Generate a random jitter within the pixel boundaries
@@ -277,7 +289,7 @@ Colour PathTracer::tracePixel(const Scene& scene, int x, int y) const {
         Vec3 rayDir = camera->getRayDirection(x + jitterX, y + jitterY);
         Ray jitteredRay(camera->position, rayDir);
         // Trace the jittered ray
-        Colour sampleColour = traceRayRecursive(scene, jitteredRay, 0);
+        Colour sampleColour = traceRayRecursive(scene, jitteredRay, 0, photonMap);
 
         // Accumulate the colour
         accumulatedColour = accumulatedColour + sampleColour;
@@ -287,8 +299,138 @@ Colour PathTracer::tracePixel(const Scene& scene, int x, int y) const {
     return accumulatedColour / static_cast<float>(samplesPerPixel);
 }
 
+Vec3 PathTracer::sampleHemisphere(const Vec3& normal) const {
+    // Generate two random numbers in [0, 1]
+    float u1 = generateRandomNumber(0.0f, 1.0f);
+    float u2 = generateRandomNumber(0.0f, 1.0f);
 
-Colour PathTracer::traceRayRecursive(const Scene& scene, const Ray& ray, int bounce) const {
+    // Convert random numbers to spherical coordinates
+    float theta = std::acos(std::sqrt(u1)); // Elevation angle
+    float phi = 2.0f * M_PI * u2;           // Azimuth angle
+
+    // Convert spherical coordinates to Cartesian coordinates
+    float x = std::sin(theta) * std::cos(phi);
+    float y = std::sin(theta) * std::sin(phi);
+    float z = std::cos(theta);
+
+    // Create the sample direction in tangent space
+    Vec3 sample(x, y, z);
+
+    // Align the sample direction with the given normal
+    // Build an orthonormal basis around the normal
+    Vec3 tangent, bitangent;
+    if (std::abs(normal.x) > std::abs(normal.z)) {
+        tangent = Vec3(-normal.y, normal.x, 0.0f).normalise();
+    } else {
+        tangent = Vec3(0.0f, -normal.z, normal.y).normalise();
+    }
+    bitangent = normal.cross(tangent);
+
+    // Transform the sample to world space
+    Vec3 worldSample = tangent * sample.x + bitangent * sample.y + normal * sample.z;
+
+    return worldSample.normalise();
+}
+
+
+void PathTracer::emitPhotons(const Scene& scene, PhotonMap& photonMap, int numPhotons) const {
+    for (int i = 0; i < numPhotons; ++i) {
+        for (const auto& light : scene.getLights()) {
+            // Assume light is an AreaLight for now
+            auto areaLight = std::dynamic_pointer_cast<AreaLight>(light);
+            if (!areaLight) continue;
+
+            // Sample a random direction for the photon
+            Vec3 photonDirection = sampleHemisphere(areaLight->getNormal());
+            Vec3 photonOrigin = areaLight->samplePoint(); // Random point on the light source
+
+            // Create a photon ray
+            Ray photonRay(photonOrigin, photonDirection);
+
+            // Set photon energy proportional to the light intensity
+            Colour photonEnergy = light->intensity;//static_cast<float>(numPhotons);
+
+            // Clamp photon energy to valid range
+            photonEnergy.clamp();
+
+            // Start photon tracing
+            tracePhoton(scene, photonRay, photonEnergy, photonMap, 0);
+        }
+    }
+}
+
+Colour PathTracer::gatherCaustics(const PhotonMap& photonMap, const Vec3& position, float radius) const {
+    auto photons = photonMap.query(position, radius);
+    Colour caustics(0, 0, 0);
+
+    // Check if no photons were gathered
+    if (photons.empty()) {
+        return caustics; // Return zero colour if no photons are found
+    }
+
+    // Precompute normalisation factor
+    float normalisationFactor = 1.0f / (M_PI * radius * radius);
+
+    for (const auto& photon : photons) {
+        float distanceSquared = (photon.position - position).length();
+        distanceSquared = distanceSquared * distanceSquared;
+        float weight = std::max(0.0f, 1.0f - distanceSquared / (radius * radius)); // Weight by proximity
+        caustics = caustics + photon.energy * weight;
+    }
+
+
+    // Normalise the result by query area
+    caustics = caustics * normalisationFactor;
+    std::cout << caustics.r << " " << caustics.g << " " << caustics.b << std::endl;
+
+    // Clamp final colour values to prevent overflows
+    caustics.clamp(); 
+
+    return caustics; // Normalize by query area
+}
+
+
+void PathTracer::tracePhoton(const Scene& scene, const Ray& ray, Colour energy, PhotonMap& photonMap, int depth) const {
+    if (depth > scene.getBounces() || energy.belowThreshold()) return;
+
+    Intersection intersection;
+    if (!scene.intersect(ray, intersection)) return;
+
+    const Vec3& hitPoint = intersection.hitPoint;
+    const Vec3& normal = intersection.normal;
+    auto material = intersection.shape->getMaterial();
+
+    // Handle diffuse surfaces: store photons for caustics
+    if (!material->isReflective && !material->isRefractive) {
+        photonMap.storePhoton(hitPoint, ray.direction, energy);
+        return;
+    }
+
+    // Handle reflective/refractive materials
+    if (material->isReflective) {
+        Vec3 reflectedDir = ray.direction - normal * 2.0f * ray.direction.dot(normal);
+        Ray reflectedRay(hitPoint + normal * 1e-4f, reflectedDir);
+        tracePhoton(scene, reflectedRay, energy * material->reflectivity, photonMap, depth + 1);
+    }
+
+    if (material->isRefractive) {
+        Vec3 refractedDir;
+        float eta = 1.0f / material->refractiveIndex;
+        float cosI = -normal.dot(ray.direction);
+        float sinT2 = eta * eta * (1.0f - cosI * cosI);
+
+        if (sinT2 <= 1.0f) { // No total internal reflection
+            float cosT = std::sqrt(1.0f - sinT2);
+            refractedDir = ray.direction * eta + normal * (eta * cosI - cosT);
+            Ray refractedRay(hitPoint - normal * 1e-4f, refractedDir);
+            tracePhoton(scene, refractedRay, energy * (1.0f - material->reflectivity), photonMap, depth + 1);
+        }
+    }
+}
+
+
+
+Colour PathTracer::traceRayRecursive(const Scene& scene, const Ray& ray, int bounce, const PhotonMap& photonMap) const {
     const int bounceCount = scene.getBounces();
     const Colour& backgroundColour = scene.getBackgroundColour();
 
@@ -315,7 +457,7 @@ Colour PathTracer::traceRayRecursive(const Scene& scene, const Ray& ray, int bou
 
     std::shared_ptr<Material> material = nearestIntersection.shape->getMaterial();
 
-    Colour colour = {0, 0, 0};
+    Colour colour = Colour(0.0f, 0.0f, 0.0f);
 
 
 
@@ -335,11 +477,11 @@ Colour PathTracer::traceRayRecursive(const Scene& scene, const Ray& ray, int bou
 
         if (areaLight) {
             // Using built-in functions of AreaLight
-            const Colour& lightIntensity = light->intensity;
+            const Colour& lightIntensity = light->intensity * 255.0f;
 
             // Number of samples per light (can be adjusted for better quality)
             int samples = 8;
-            Colour lightContribution = {0, 0, 0};
+            Colour lightContribution(0.0f, 0.0f, 0.0f);
             float lightArea = areaLight->width * areaLight->height;
 
             // Sample light multiple times for area-based lighting
@@ -393,9 +535,54 @@ Colour PathTracer::traceRayRecursive(const Scene& scene, const Ray& ray, int bou
     }
 
 
-    // Adjust illumination of the scene (ambient lighting)
-    Colour globalIllumination = textureDiffuseColor  * 0.25f;
-    colour = colour + globalIllumination;
+    // // Adjust illumination of the scene (ambient lighting)
+    // Colour globalIllumination = textureDiffuseColor  * 0.25f;
+    // colour = colour + globalIllumination;
+
+
+    // if (!material->isReflective && !material->isRefractive) {
+    //     // Gather indirect light from photon map
+    //     float searchRadius = 0.1f; // Adjust based on scene scale
+    //     Colour indirectIllumination = gatherCaustics(photonMap, hitPoint, searchRadius);
+
+    //     // Combine with direct illumination
+    //     Colour directIllumination = Colour(0.0f, 0.0f, 0.0f);
+    //     for (const auto& light : lights) {
+    //         if (auto areaLight = std::dynamic_pointer_cast<AreaLight>(light)) {
+    //             Vec3 lightSamplePoint = areaLight->samplePoint();
+    //             Vec3 lightDir = (lightSamplePoint - hitPoint).normalise();
+    //             float lightDistance = (lightSamplePoint - hitPoint).length();
+
+    //             // Shadow ray to check occlusion
+    //             const float epsilon = 1e-4f;
+    //             Ray shadowRay(hitPoint + normal * epsilon, lightDir);
+    //             Intersection shadowIntersection;
+
+    //             bool inShadow = scene.intersect(shadowRay, shadowIntersection) &&
+    //                             shadowIntersection.t > 0.0001f &&
+    //                             shadowIntersection.t < lightDistance;
+
+    //             if (!inShadow) {
+    //                 // Calculate diffuse contribution
+    //                 float diffuseFactor = std::max(0.0f, normal.dot(lightDir));
+    //                 Colour diffuseContribution = material->diffuseColor * diffuseFactor * areaLight->intensity;
+
+    //                 // Calculate specular contribution
+    //                 Vec3 viewDir = (scene.getCamera()->position - hitPoint).normalise();
+    //                 Vec3 reflectDir = (normal * (2.0f * normal.dot(lightDir)) - lightDir).normalise();
+    //                 float specularFactor = std::pow(std::max(0.0f, viewDir.dot(reflectDir)), material->specularExponent);
+    //                 Colour specularContribution = material->specularColor * specularFactor * areaLight->intensity;
+
+    //                 // Add contributions to direct illumination
+    //                 directIllumination = directIllumination + (diffuseContribution + specularContribution);
+    //             }
+    //         }
+    //     }
+
+    //     // Add direct and indirect illumination to final colour
+    //     colour = directIllumination + indirectIllumination;
+    //     return colour;
+    // }
 
     // === Russian Roulette for Indirect Rays ===
     if (bounce > 2) { // Apply after 2 bounces
@@ -431,7 +618,7 @@ Colour PathTracer::traceRayRecursive(const Scene& scene, const Ray& ray, int bou
         // --- Reflection ---
         if (material->isReflective) {
             int numSamples = 4;
-            float roughness = std::sqrt(2.0f / (material->specularExponent + 2.0f));
+            float roughness = std::max(std::sqrt(2.0f / (material->specularExponent + 2.0f)),1.0f);
 
             // Sample multiple directions for indirect light (brdf)
             for (int i = 0; i < numSamples; i++) {
@@ -443,7 +630,7 @@ Colour PathTracer::traceRayRecursive(const Scene& scene, const Ray& ray, int bou
 
 
                 // Trace the reflected ray
-                Colour sampleColour = traceRayRecursive(scene, Ray(hitPoint + adjustedNormal * 0.0001f, reflectedDir), bounce + 1);
+                Colour sampleColour = traceRayRecursive(scene, Ray(hitPoint + adjustedNormal * 0.0001f, reflectedDir), bounce + 1, photonMap);
 
                 // Evaluate the Cook-Torrance BRDF
                 Colour F0 = Colour(10, 10, 10);  // Base reflectance for non-metals
@@ -480,7 +667,7 @@ Colour PathTracer::traceRayRecursive(const Scene& scene, const Ray& ray, int bou
             if (sinT2 <= 1.0f) {  // No total internal reflection
                 float cosT = std::sqrt(1.0f - sinT2);
                 Vec3 refractedDir = ray.direction * eta + adjustedNormal * (eta * cosI - cosT);
-                refractedColour = traceRayRecursive(scene, Ray(hitPoint - adjustedNormal * 0.0001f, refractedDir), bounce + 1);
+                refractedColour = traceRayRecursive(scene, Ray(hitPoint - adjustedNormal * 0.0001f, refractedDir), bounce + 1, photonMap);
             } else {
                 fresnelReflectance = 1.0f;  // Total internal reflection: fully reflective
             }

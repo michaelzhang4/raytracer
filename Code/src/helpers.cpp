@@ -13,7 +13,7 @@ void writePPM(const std::string &filename, const std::vector<Colour> &pixels, in
     for (int i = 0; i < height; ++i) {
         for (int j = 0; j < width; ++j) {
             const Colour &colour = pixels[i * width + j];
-            outFile << colour.r << " " << colour.g << " " << colour.b << " ";
+            outFile << static_cast<int>(colour.r) << " " << static_cast<int>(colour.g) << " " << static_cast<int>(colour.b) << " ";
         }
         outFile << "\n";
     }
@@ -46,7 +46,7 @@ std::pair<std::vector<Colour>, std::pair<int, int>> readPPM(const std::string &f
 
     int r, g, b;
     while (inFile >> r >> g >> b) {
-        pixels.emplace_back(r, g, b);
+        pixels.emplace_back(static_cast<float>(r), static_cast<float>(g), static_cast<float>(b));
     }
 
     return {pixels, {width, height}};

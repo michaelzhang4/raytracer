@@ -13,6 +13,7 @@ enum class RenderMode {
 struct Vec3 {
     float x, y, z;
 
+
     // Default constructor
     Vec3() : x(0.0f), y(0.0f), z(0.0f) {}
 
@@ -47,13 +48,18 @@ struct Vec3 {
 };
 
 struct Colour {
-    int r, g, b;
+    float r, g, b;
+
+ // Default constructor (explicitly for floating-point values)
+    Colour() : r(0.0f), g(0.0f), b(0.0f) {}
 
     // Constructor
-    Colour(int red = 0, int green = 0, int blue = 0);
+    explicit Colour(float red , float green, float blue);
+    explicit Colour(int red, int green, int blue);
 
     // Method to clamp colour values
     void clamp();
+
 
     Vec3 toVec3() const {
         return Vec3(r / 255.0f, g / 255.0f, b / 255.0f);
@@ -64,6 +70,7 @@ struct Colour {
     Colour operator+(const Colour& other) const;
     Colour operator/(float scalar) const;
     Colour operator-(const Colour& other) const;
+    bool belowThreshold() const;
 };
 
 class Ray {
@@ -75,5 +82,4 @@ public:
 
     Vec3 at(float t) const;
 };
-
 #endif

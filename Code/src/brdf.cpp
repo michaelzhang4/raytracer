@@ -32,6 +32,7 @@ float BRDF::SchlickG(const Vec3& N, const Vec3& V, float roughness) {
     return nv / (nv * (1.0f - k) + k);
 }
 
+
 // Cook-Torrance BRDF
 Colour BRDF::CookTorrance(
     const Vec3& lightDir,
@@ -42,10 +43,25 @@ Colour BRDF::CookTorrance(
     const Colour& F0,
     float roughness
 ) {
+    // GGX Normal Distribution
     float D = GGX_D(normal, halfVector, roughness);
+
+    // Geometry Function
     float G = SchlickG(normal, lightDir, roughness) * SchlickG(normal, viewDir, roughness);
-    float denominator = 4.0f * std::max(normal.dot(lightDir), 0.0f) * std::max(normal.dot(viewDir), 0.0f);
-    return baseColor * (D * G) / std::max(denominator, 0.001f);
+
+    // Fresnel Term
+    Colour F = FresnelSchlick(halfVector, viewDir, F0);
+
+    // Denominator
+    float NdotL = std::max(normal.dot(lightDir), 0.0f);
+    float NdotV = std::max(normal.dot(viewDir), 0.0f);
+    float denominator = 4.0f * NdotL * NdotV;
+
+    // Cook-Torrance Equation
+    Colour specular = (F * D * G) / std::max(denominator, 0.001f);
+
+    // Combine with base colour (diffuse term can be added if needed)
+    return baseColor * NdotL + specular * NdotL;
 }
 
 

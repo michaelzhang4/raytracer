@@ -87,21 +87,22 @@ float& Vec3::operator[](int index) {
 }
 
 // Constructor
-Colour::Colour(int red, int green, int blue) : r(red), g(green), b(blue) {}
-
+Colour::Colour(float red, float green, float blue) : r(red), g(green), b(blue) {}
+Colour::Colour(int red, int green, int blue)
+    : r(static_cast<float>(red)), g(static_cast<float>(green)), b(static_cast<float>(blue)) {}
+    
 // Method to clamp colour values to the range [0, 255]
 void Colour::clamp() {
-    r = std::clamp(r, 0, 255);
-    g = std::clamp(g, 0, 255);
-    b = std::clamp(b, 0, 255);
+    r = std::clamp(r, 0.0f, 255.0f);
+    g = std::clamp(g, 0.0f, 255.0f);
+    b = std::clamp(b, 0.0f, 255.0f);
 }
-
 // Operator overloading: multiply by scalar
 Colour Colour::operator*(float scalar) const {
     return Colour(
-        static_cast<int>(r * scalar),
-        static_cast<int>(g * scalar),
-        static_cast<int>(b * scalar)
+        r * scalar,
+        g * scalar,
+        b * scalar
     );
 }
 
@@ -122,9 +123,9 @@ Colour Colour::operator*(const Colour& other) const {
 // Overload division operator for scalar
 Colour Colour::operator/(float scalar) const {
     return Colour(
-        static_cast<int>(r / scalar),
-        static_cast<int>(g / scalar),
-        static_cast<int>(b / scalar)
+        r / scalar,
+        g / scalar,
+        b / scalar
     );
 }
 
@@ -132,6 +133,10 @@ Colour Colour::operator-(const Colour& other) const {
     return Colour(r - other.r, g - other.g, b - other.b);
 }
 
+bool Colour::belowThreshold() const {
+    const float threshold = 0.1f;
+    return r <= threshold && g <= threshold && b <= threshold;
+}
 
 Ray::Ray(const Vec3& origin, const Vec3& direction)
     : origin(origin), direction(direction.normalise()) {}

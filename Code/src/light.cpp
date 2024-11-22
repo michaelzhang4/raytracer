@@ -34,6 +34,11 @@ Vec3 AreaLight::samplePoint() const {
     return position + u * (randU - 0.5f) * width + v * (randV - 0.5f) * height;
 }
 
+Vec3 AreaLight::getNormal() const {
+    Vec3 normal = u.cross(v); // Compute cross product
+    return normal.normalise(); // Ensure the normal is a unit vector
+}
+
 float AreaLight::pdf() const {
     if (width <= 0 || height <= 0) {
         std::cerr << "Error: AreaLight dimensions are invalid!" << std::endl;

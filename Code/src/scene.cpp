@@ -50,8 +50,11 @@ Scene::Scene(const json& jsonData) {
 
             // Parse position and intensity
             Vec3 position = getVec3FromJson(lightData, "position", {0, 0, 0});
-            Colour intensity = getColourFromJson(lightData, "intensity", Colour(255, 255, 255));
-
+            Colour intensity = Colour(
+                lightData["intensity"][0].get<float>(),
+                lightData["intensity"][1].get<float>(),
+                lightData["intensity"][2].get<float>()
+            );
             if (renderMode == RenderMode::BINARY) {
                 lights.emplace_back(std::make_shared<PointLight>(position, intensity));  
             } else if (renderMode == RenderMode::PHONG){

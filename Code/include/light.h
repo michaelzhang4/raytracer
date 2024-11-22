@@ -40,7 +40,7 @@ public:
 
     // Constructor
     AreaLight(const Vec3& position, const Colour& intensity, const Vec3& u, const Vec3& v, float width, float height);
-
+    Vec3 getNormal() const;
     // Override base class methods
     Vec3 samplePoint() const override;
     float pdf() const override;

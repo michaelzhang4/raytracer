@@ -49,15 +49,10 @@ Colour reinhardToneMap(const Colour& hdrColour, float exposure) {
     float g_mapped = g_f * scale;
     float b_mapped = b_f * scale;
 
-    // Convert back to integer Colour with clamping
-    int r_final = static_cast<int>(std::round(r_mapped * 255.0f));
-    int g_final = static_cast<int>(std::round(g_mapped * 255.0f));
-    int b_final = static_cast<int>(std::round(b_mapped * 255.0f));
-
     // Clamp the results to [0, 255]
-    r_final = std::clamp(r_final, 0, 255);
-    g_final = std::clamp(g_final, 0, 255);
-    b_final = std::clamp(b_final, 0, 255);
+    float r_final = std::clamp(r_mapped, 0.0f, 255.0f);
+    float g_final = std::clamp(g_mapped, 0.0f, 255.0f);
+    float b_final = std::clamp(b_mapped, 0.0f, 255.0f);
 
     // Return the mapped Colour
     return Colour(r_final, g_final, b_final);
@@ -66,9 +61,9 @@ Colour reinhardToneMap(const Colour& hdrColour, float exposure) {
 // Gamma correction function for integer Colour
 Colour gammaCorrect(const Colour& linearColour, float gamma) {
     //Normalize the color channels to [0.0, 1.0]
-    float r_norm = static_cast<float>(std::max(linearColour.r, 0)) / 255.0f;
-    float g_norm = static_cast<float>(std::max(linearColour.g, 0)) / 255.0f;
-    float b_norm = static_cast<float>(std::max(linearColour.b, 0)) / 255.0f;
+    float r_norm = static_cast<float>(std::max(linearColour.r, 0.0f)) / 255.0f;
+    float g_norm = static_cast<float>(std::max(linearColour.g, 0.0f)) / 255.0f;
+    float b_norm = static_cast<float>(std::max(linearColour.b, 0.0f)) / 255.0f;
 
     //Apply gamma correction
     float r_gamma = std::pow(r_norm, 1.0f / gamma);
