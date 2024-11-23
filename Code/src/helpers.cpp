@@ -1,6 +1,5 @@
 #include "helpers.h"
 
-
 // Creates ppm images from buffer of pixels containing RBG colours
 void writePPM(const std::string &filename, const std::vector<Colour> &pixels, int width, int height) {
     std::ofstream outFile(filename, std::ios::out | std::ios::binary);

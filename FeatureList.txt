@@ -1,0 +1,24 @@
+Raytracer features (All fully working)
+    - Image write (ppm format): yes
+    - Camera implementation, with coordinate transformation: yes
+    - Intersection tests (sphere, triangles, cylinder): yes
+    - Binary image writing (intersection/no intersection): yes
+    - Blinn-Phong shading: yes
+    - Shadows: yes
+    - Tone mapping (linear): yes
+    - Reflection: yes
+    - Refraction: yes
+    - Textures (on sphere, triangle, cylinder): yes
+    - Bounding volume hierarchy as an acceleration structure: yes
+
+Pathtracer features (All fully working)
+    - Antialiasing via multi-sampling pixels: yes
+    - Defocus in finite-aperture cameras by sampling the camera’s aperture: yes
+    - Render materials with BRDF’s (e.g. microfacet): yes
+    - Soft shadows via sampling area lights: yes
+    - Multi-bounce path tracing: yes
+    - An advanced feature of your choice (eg. Caustics, Volumetrics, fancy BRDFs, etc.): yes
+
+Exceptional raytracer features (All fully working)
+    - Caustics
+    - Fancy BRDFs (Cook-Torrance model)

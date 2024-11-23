@@ -30,9 +30,9 @@ Vec3 ACESFittedToneMap(const Vec3& color, float exposure) {
 // Reinhard's Global Tone Mapping Function
 Colour reinhardToneMap(const Colour& hdrColour, float exposure) {
     //Convert integer Colour to floating-point [0.0, 1.0]
-    float r_f = static_cast<float>(hdrColour.r) / 255.0f;
-    float g_f = static_cast<float>(hdrColour.g) / 255.0f;
-    float b_f = static_cast<float>(hdrColour.b) / 255.0f;
+    float r_f = hdrColour.r / 255.0f;
+    float g_f = hdrColour.g / 255.0f;
+    float b_f = hdrColour.b / 255.0f;
 
     // Compute luminance Y using Rec. 709 coefficients
     float Y = 0.2126f * r_f + 0.7152f * g_f + 0.0722f * b_f;
@@ -61,9 +61,9 @@ Colour reinhardToneMap(const Colour& hdrColour, float exposure) {
 // Gamma correction function for integer Colour
 Colour gammaCorrect(const Colour& linearColour, float gamma) {
     //Normalize the color channels to [0.0, 1.0]
-    float r_norm = static_cast<float>(std::max(linearColour.r, 0.0f)) / 255.0f;
-    float g_norm = static_cast<float>(std::max(linearColour.g, 0.0f)) / 255.0f;
-    float b_norm = static_cast<float>(std::max(linearColour.b, 0.0f)) / 255.0f;
+    float r_norm = std::max(linearColour.r, 0.0f) / 255.0f;
+    float g_norm = std::max(linearColour.g, 0.0f) / 255.0f;
+    float b_norm = std::max(linearColour.b, 0.0f) / 255.0f;
 
     //Apply gamma correction
     float r_gamma = std::pow(r_norm, 1.0f / gamma);

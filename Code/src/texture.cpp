@@ -17,19 +17,6 @@ Texture::Texture(const std::string& filename) {
     pixels = std::move(data);
 }
 
-// Texture::Texture(const std::string& filename) {
-//     std::string texturePath = "textures/";
-//     std::string path = texturePath+filename+".ppm";
-//     std::cout << "Loading texture: " << filename << std::endl;
-//     auto [data, dimensions] = readPPM(path);
-//     assert(!data.empty() && "Texture data is empty!");
-//     assert(dimensions.first > 0 && dimensions.second > 0 && "Invalid texture dimensions!");
-//     width = dimensions.first;
-//     height = dimensions.second;
-//     pixels = std::move(data);
-//     std::cout << "Texture loaded successfully: " << width << "x" << height << std::endl;
-// }
-
 Colour Texture::getPixel(int u, int v) const {
     u = (u % width + width) % width;
     v = (v % height + height) % height;

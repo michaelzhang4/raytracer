@@ -146,7 +146,7 @@ Colour PhongTracer::traceRayRecursive(const Scene& scene, const Ray& ray, int bo
 
         // Calculate distance to light
         float lightDistance = (light->position - hitPoint).length();
-        float shadowFactor = 0.1f;
+        float shadowFactor = 0.01f;
 
         // Check for occlusion
         for (const auto& shape : shapes) {
@@ -178,7 +178,7 @@ Colour PhongTracer::traceRayRecursive(const Scene& scene, const Ray& ray, int bo
     }
 
     // Adjust illumination of the scene (ambient lighting)
-    Colour globalIllumination = textureDiffuseColor  * 0.25f;
+    Colour globalIllumination = textureDiffuseColor  * 0.4f;
     colour = colour + globalIllumination;
 
     if (material->isReflective || material->isRefractive) {
@@ -261,9 +261,9 @@ void PathTracer::renderScene(const Scene& scene, std::vector<Colour>& pixels) co
     }
 
     // Gamma correction
-    // for (int y =0;y< camera.height;++y) {
-    //     for (int x=0;x<camera.width; ++x) {
-    //         pixels[y*camera.width + x] = gammaCorrect(pixels[y*camera.width + x]);
+    // for (int y =0;y< camera->height;++y) {
+    //     for (int x=0;x<camera->width; ++x) {
+    //         pixels[y*camera->width + x] = gammaCorrect(pixels[y*camera->width + x]);
     //     }
     // }
 
@@ -387,7 +387,7 @@ Colour PathTracer::gatherCaustics(const PhotonMap& photonMap, const Vec3& positi
     caustics.clamp(); 
 
     // Limit the maximum contribution from caustics
-    float maxIndirectIllumination = 0.02f; // Cap for indirect illumination
+    float maxIndirectIllumination = 0.01f; // Cap for indirect illumination
     caustics = caustics * maxIndirectIllumination;
 
     return caustics; // Normalize by query area
@@ -428,11 +428,14 @@ void PathTracer::tracePhoton(const Scene& scene, const Ray& ray, Colour energy, 
             refractedDir = ray.direction * eta + normal * (eta * cosI - cosT);
             Ray refractedRay(hitPoint - normal * 1e-4f, refractedDir);
             tracePhoton(scene, refractedRay, energy * (1.0f - material->reflectivity), photonMap, depth + 1);
+        } else {
+            // Total Internal Reflection
+            Vec3 reflectedDir = ray.direction - normal * 2.0f * ray.direction.dot(normal);
+            Ray reflectedRay(hitPoint + normal * 1e-4f, reflectedDir); // Offset to prevent self-intersection
+            tracePhoton(scene, reflectedRay, energy, photonMap, depth + 1);
         }
     }
 }
-
-
 
 Colour PathTracer::traceRayRecursive(const Scene& scene, const Ray& ray, int bounce, const PhotonMap& photonMap) const {
     const int bounceCount = scene.getBounces();
