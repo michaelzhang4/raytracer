@@ -43,26 +43,46 @@ Colour BRDF::CookTorrance(
     const Colour& F0,
     float roughness
 ) {
-    // GGX Normal Distribution
-    float D = GGX_D(normal, halfVector, roughness);
+    // Normalize vectors
+    Vec3 N = normal.normalise();
+    Vec3 L = lightDir.normalise();
+    Vec3 V = viewDir.normalise();
+    Vec3 H = halfVector.normalise();
+
+    // Ensure roughness is within valid range
+    float alpha = std::max(roughness * roughness, 0.05f);
+
+    // GGX Normal Distribution Function
+    float D = GGX_D(N, H, alpha);
 
     // Geometry Function
-    float G = SchlickG(normal, lightDir, roughness) * SchlickG(normal, viewDir, roughness);
+    float k = (roughness + 1.0f) * (roughness + 1.0f) / 8.0f;  // For Schlick's G
+    float G = SchlickG(N, V, k) * SchlickG(N, L, k);
 
     // Fresnel Term
-    Colour F = FresnelSchlick(halfVector, viewDir, F0);
+    Colour F = FresnelSchlick(H, V, F0);
 
     // Denominator
-    float NdotL = std::max(normal.dot(lightDir), 0.0f);
-    float NdotV = std::max(normal.dot(viewDir), 0.0f);
-    float denominator = 4.0f * NdotL * NdotV;
+    float NdotL = std::max(N.dot(L), 0.0f);
+    float NdotV = std::max(N.dot(V), 0.0f);
+
+    // If NdotL or NdotV are zero, no light is reflected
+    if (NdotL <= 0.0f || NdotV <= 0.0f) {
+        return Colour(0.0f, 0.0f, 0.0f);
+    }
+
+    float denominator = 4.0f * NdotL * NdotV + 1e-7f;  // Add epsilon to prevent division by zero
 
     // Cook-Torrance Equation
-    Colour specular = (F * D * G) / std::max(denominator, 0.001f);
+    Colour specular = (F * D * G) / denominator;
 
-    // Combine with base colour (diffuse term can be added if needed)
-    return baseColor * NdotL + specular * NdotL;
+    // Lambertian Diffuse
+    Colour diffuse = baseColor * (1.0f / M_PI) * NdotL;
+
+    // Final color
+    return diffuse + specular;
 }
+
 
 
 Vec3 BRDF::sampleGGX(const Vec3& normal, float roughness) {

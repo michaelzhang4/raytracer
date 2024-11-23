@@ -185,7 +185,7 @@ std::pair<float, float> Cylinder::getUV(const Vec3& hitPoint) const {
     float projection = hitToCenter.dot(axis); // Distance along the axis
 
     // Side surface UV mapping
-    if (projection >= 0.0f && projection <= height) {
+    if (projection >= -height && projection <= height) {
         // Remove the axis component to get the point on the circular cross-section
         Vec3 circularPoint = hitToCenter - axis * projection;
 

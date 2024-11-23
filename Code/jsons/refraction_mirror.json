@@ -37,7 +37,7 @@
                             "isreflective":false,
                             "reflectivity":1.0,
                             "isrefractive":true,
-                            "refractiveindex":1.01 
+                            "refractiveindex":1.1
                         } 
                 },
                 { 
@@ -51,10 +51,10 @@
                             "specularexponent":20, 
                             "diffusecolor":[0.8, 0.5, 0.8],
                             "specularcolor":[1.0,1.0,1.0],
-                            "isreflective":false,
+                            "isreflective":true,
                             "reflectivity":1.0,
-                            "isrefractive":true,
-                            "refractiveindex":1.01
+                            "isrefractive":false,
+                            "refractiveindex":1.5
                         } 
                 },
                 {
@@ -68,12 +68,12 @@
                             "ks":0.1, 
                             "kd":0.9, 
                             "specularexponent":20, 
-                            "diffusecolor":[0.5, 0.5, 0.8],
+                            "diffusecolor":[0.7, 0.7, 0.7],
                             "specularcolor":[1.0,1.0,1.0],
                             "isreflective":false,
                             "reflectivity":1.0,
                             "isrefractive":true,
-                            "refractiveindex":1.01 
+                            "refractiveindex":1.5
                         } 
                 },
                 { 
