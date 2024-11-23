@@ -41,24 +41,47 @@ void BinaryTracer::renderScene(const Scene& scene, std::vector<Colour>& pixels) 
     }
 }
 
-float fresnel(const Vec3& I, const Vec3& N, float eta) {
-    float cosI = std::clamp(I.dot(N), -1.0f, 1.0f);  // Dot product of incident ray and normal
-    float sinT2 = eta * eta * (1.0f - cosI * cosI);  // Snell's law to calculate sin^2(theta_t)
-    if (cosI < 0.0f) {
-        cosI = -cosI;  // Flip if the normal is in the wrong direction
+float fresnel(const Vec3& I, const Vec3& N, float n1, float n2) {
+    float cosI = I.dot(N);
+    float etaI = n1;
+    float etaT = n2;
+    Vec3 normal = N;
+
+    // Determine if the ray is entering or exiting
+    if (cosI > 0.0f) {  // Ray is exiting the material
+        std::swap(etaI, etaT);  // Swap the indices
+        normal = -N;            // Flip the normal
+        cosI = -cosI;           // Make cosI positive
     }
+
+    // Compute sinT2 using Snell's Law
+    float eta = etaI / etaT;
+    float sinT2 = eta * eta * (1.0f - cosI * cosI);
+
+    // Total internal reflection
     if (sinT2 > 1.0f) {
-        // Total internal reflection
         return 1.0f;
     }
 
-    float cosT = std::sqrt(1.0f - sinT2);  // cos(theta_t)
+    float cosT = std::sqrt(1.0f - sinT2);
 
-    float rOrth = (eta * cosI - cosT) / (eta * cosI + cosT + 1e-6);  // Reflectance for perpendicular polarisation
-    float rPara = (cosI - eta * cosT) / (cosI + eta * cosT + 1e-6);  // Reflectance for parallel polarisation
+    // Compute Fresnel reflectance for perpendicular and parallel polarizations
+    float rPerp = ((etaT * cosI) - (etaI * cosT)) / ((etaT * cosI) + (etaI * cosT) + 1e-6f);
+    float rPara = ((etaI * cosI) - (etaT * cosT)) / ((etaI * cosI) + (etaT * cosT) + 1e-6f);
 
-    return std::clamp((rOrth * rOrth + rPara * rPara) * 0.5f, 0.0f, 1.0f);
+    // Average reflectance
+    float reflectance = (rPerp * rPerp + rPara * rPara) * 0.5f;
+
+    return std::clamp(reflectance, 0.0f, 1.0f);
 }
+
+
+float fresnelSchlick(float cosTheta, float n1, float n2) {
+    float R0 = (n1 - n2) / (n1 + n2);
+    R0 = R0 * R0;
+    return R0 + (1.0f - R0) * pow(1.0f - cosTheta, 5.0f);
+}
+
 
 void PhongTracer::renderScene(const Scene& scene, std::vector<Colour>& pixels) const {
     std::shared_ptr<Camera> camera = scene.getCamera();
@@ -200,12 +223,15 @@ Colour PhongTracer::traceRayRecursive(const Scene& scene, const Ray& ray, int bo
 
         // Determine if the ray is entering or exiting the material
         if (ray.direction.dot(normal) > 0.0f) {  // Exiting the material
-            std::swap(n1, n2);  // Swap indices
             adjustedNormal = -normal;  // Flip normal for correct reflection/refraction
         }
 
         float eta = n1 / n2;
-        float fresnelReflectance = fresnel(ray.direction, adjustedNormal, eta);
+            // Calculate the cosine of the incident angle
+        float cosTheta = std::clamp(-ray.direction.dot(adjustedNormal), 0.0f, 1.0f);
+
+        // Use Schlick's approximation for Fresnel reflectance
+        float fresnelReflectance = fresnelSchlick(cosTheta, n1, n2);
         Colour reflectedColour(0, 0, 0);
         Colour refractedColour(0, 0, 0);
 
@@ -224,7 +250,6 @@ Colour PhongTracer::traceRayRecursive(const Scene& scene, const Ray& ray, int bo
                 float cosT = std::sqrt(1.0f - sinT2);
                 Vec3 refractedDir = ray.direction * eta + adjustedNormal * (eta * cosI - cosT);
                 refractedColour = material->diffuseColor * traceRayRecursive(scene, Ray(hitPoint - adjustedNormal * 0.0001f, refractedDir), bounce + 1);
-                // refractedColour = traceRayRecursive(scene, Ray(hitPoint - adjustedNormal * 0.0001f, refractedDir), bounce + 1);
             } else {
                 fresnelReflectance = 1.0f;  // Total internal reflection: fully reflective
             }
@@ -599,16 +624,22 @@ Colour PathTracer::traceRayRecursive(const Scene& scene, const Ray& ray, int bou
 
     // Indirect light
     if (material->isReflective || material->isRefractive) {
-        Vec3 adjustedNormal = normal;
-        float n1 = 1.0f, n2 = material->refractiveIndex;
-
-        // Determine if the ray is entering or exiting the material
-        if (ray.direction.dot(normal) > 0.0f) {  // Exiting the material
-            std::swap(n1, n2);  // Swap indices
-            adjustedNormal = -normal;  // Flip normal for correct reflection/refraction
-        }
-
+        bool entering = ray.direction.dot(normal) < 0.0f;
+        Vec3 adjustedNormal = entering ? normal : -normal;
+        float n1 = entering ? 1.0f : material->refractiveIndex;
+        float n2 = entering ? material->refractiveIndex : 1.0f;
         float eta = n1 / n2;
+        float cosI = -adjustedNormal.dot(ray.direction);
+        // Vec3 adjustedNormal = normal;
+        // float n1 = 1.0f, n2 = material->refractiveIndex;
+
+        // // Determine if the ray is entering or exiting the material
+        // if (ray.direction.dot(normal) > 0.0f) {  // Exiting the material
+        //     std::swap(n1, n2);  // Swap indices
+        //     adjustedNormal = -normal;  // Flip normal for correct reflection/refraction
+        // }
+
+        // float eta = n1 / n2;
         float fresnelReflectance = 0.0f;
         Colour reflectedColour(0, 0, 0);
         Colour refractedColour(0, 0, 0);
@@ -631,7 +662,7 @@ Colour PathTracer::traceRayRecursive(const Scene& scene, const Ray& ray, int bou
                 Colour sampleColour = traceRayRecursive(scene, Ray(hitPoint + adjustedNormal * 0.0001f, reflectedDir), bounce + 1, photonMap);
 
                 // Evaluate the Cook-Torrance BRDF
-                Colour F0 = Colour(10, 10, 10);  // Base reflectance for non-metals
+                Colour F0 = material->specularColor;  // Base reflectance for non-metals
                 Colour brdf = BRDF::CookTorrance(
                     reflectedDir,            // Light direction
                     -ray.direction,          // View direction
@@ -656,7 +687,7 @@ Colour PathTracer::traceRayRecursive(const Scene& scene, const Ray& ray, int bou
             reflectedColour = reflectedColour / float(numSamples);
         }
 
-        float cosI = -adjustedNormal.dot(ray.direction);
+        // float cosI = -adjustedNormal.dot(ray.direction);
 
         // --- Refraction ---
         if (material->isRefractive) {
@@ -665,16 +696,25 @@ Colour PathTracer::traceRayRecursive(const Scene& scene, const Ray& ray, int bou
             if (sinT2 <= 1.0f) {  // No total internal reflection
                 float cosT = std::sqrt(1.0f - sinT2);
                 Vec3 refractedDir = ray.direction * eta + adjustedNormal * (eta * cosI - cosT);
+                refractedDir.normalise();
+
                 refractedColour = traceRayRecursive(scene, Ray(hitPoint - adjustedNormal * 0.0001f, refractedDir), bounce + 1, photonMap);
+
+                // Schlick approximation
+                float r0 = (n1 - n2) / (n1 + n2);
+                r0 = r0 * r0;
+                fresnelReflectance = r0 + (1.0f - r0) * std::pow(1.0f - cosI, 5.0f);
+                fresnelReflectance = std::clamp(fresnelReflectance, 0.0f, 1.0f);
             } else {
-                fresnelReflectance = 1.0f;  // Total internal reflection: fully reflective
+                fresnelReflectance = 1.0f;  // Total internal reflection
             }
+        } else if (material->isReflective) {
+            // Schlick approximation
+            float r0 = (n1 - n2) / (n1 + n2);
+            r0 = r0 * r0;
+            fresnelReflectance = r0 + (1.0f - r0) * std::pow(1.0f - std::abs(cosI), 5.0f);
+            fresnelReflectance = std::max(fresnelReflectance, 0.05f); // Clamp Fresnel reflectance
         }
-        // Schlick approximation
-        float r0 = (n1 - n2) / (n1 + n2);
-        r0 = r0 * r0;
-        fresnelReflectance = r0 + (1.0f - r0) * std::pow(1.0f - std::abs(cosI), 5.0f);
-        fresnelReflectance = std::max(fresnelReflectance, 0.05f); // Clamp Fresnel reflectance
 
         // --- Blend reflection and refraction ---
         if (material->isReflective && material->isRefractive) {
