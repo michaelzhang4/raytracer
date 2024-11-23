@@ -27,9 +27,8 @@ Vec3 ACESFittedToneMap(const Vec3& color, float exposure) {
     );
 }
 
-// Reinhard's Global Tone Mapping Function
 Colour reinhardToneMap(const Colour& hdrColour, float exposure) {
-    //Convert integer Colour to floating-point [0.0, 1.0]
+    // Convert integer Colour to floating-point [0.0, 1.0]
     float r_f = hdrColour.r / 255.0f;
     float g_f = hdrColour.g / 255.0f;
     float b_f = hdrColour.b / 255.0f;
@@ -41,18 +40,24 @@ Colour reinhardToneMap(const Colour& hdrColour, float exposure) {
     float Y_scaled = Y * exposure;
     float Y_mapped = Y_scaled / (1.0f + Y_scaled);
 
-    // Compute scaling factor to maintain color ratios
-    float scale = (Y > 0.0f) ? (Y_mapped / Y) : 0.0f;
+    // Avoid division by zero with a small epsilon
+    float epsilon = 1e-6f;
+    float scale = (Y > epsilon) ? (Y_mapped / Y) : 0.0f;
 
     // Scale RGB channels
     float r_mapped = r_f * scale;
     float g_mapped = g_f * scale;
     float b_mapped = b_f * scale;
 
-    // Clamp the results to [0, 255]
-    float r_final = std::clamp(r_mapped, 0.0f, 255.0f);
-    float g_final = std::clamp(g_mapped, 0.0f, 255.0f);
-    float b_final = std::clamp(b_mapped, 0.0f, 255.0f);
+    // Clamp the results to [0, 1]
+    r_mapped = std::clamp(r_mapped, 0.0f, 1.0f);
+    g_mapped = std::clamp(g_mapped, 0.0f, 1.0f);
+    b_mapped = std::clamp(b_mapped, 0.0f, 1.0f);
+
+    // Convert back to [0, 255]
+    float r_final = r_mapped * 255.0f;
+    float g_final = g_mapped * 255.0f;
+    float b_final = b_mapped * 255.0f;
 
     // Return the mapped Colour
     return Colour(r_final, g_final, b_final);

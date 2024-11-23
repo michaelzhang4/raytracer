@@ -76,6 +76,19 @@ void PhongTracer::renderScene(const Scene& scene, std::vector<Colour>& pixels) c
 
             // Apply tone mapping to the final pixel before storage
             pixelColour = linearToneMap(pixelColour, exposure);
+
+            // ACES
+            // Vec3 hdrColor(pixelColour.r / 255.0f, pixelColour.g / 255.0f, pixelColour.b / 255.0f);
+
+            // Vec3 acesTonemapped = ACESFittedToneMap(hdrColor, exposure);
+
+            // // Convert Vec3 back to Colour (scaling to 0–255 range)
+            // pixelColour = Colour(
+            //     static_cast<int>(acesTonemapped.x * 255.0f),
+            //     static_cast<int>(acesTonemapped.y * 255.0f),
+            //     static_cast<int>(acesTonemapped.z * 255.0f)
+            // );
+
             pixels[y * camera->width + x] = pixelColour;
         }
     }
@@ -192,13 +205,12 @@ Colour PhongTracer::traceRayRecursive(const Scene& scene, const Ray& ray, int bo
         }
 
         float eta = n1 / n2;
-        float fresnelReflectance = 0.0f;
+        float fresnelReflectance = fresnel(ray.direction, adjustedNormal, eta);
         Colour reflectedColour(0, 0, 0);
         Colour refractedColour(0, 0, 0);
 
         // --- Reflection ---
         if (material->isReflective) {
-            fresnelReflectance = fresnel(ray.direction, adjustedNormal, eta);
             Vec3 reflectedDir = ray.direction - adjustedNormal * 2.0f * ray.direction.dot(adjustedNormal);
             reflectedColour = traceRayRecursive(scene, Ray(hitPoint + adjustedNormal * 0.0001f, reflectedDir), bounce + 1);
         }
@@ -211,7 +223,8 @@ Colour PhongTracer::traceRayRecursive(const Scene& scene, const Ray& ray, int bo
             if (sinT2 <= 1.0f) {  // No total internal reflection
                 float cosT = std::sqrt(1.0f - sinT2);
                 Vec3 refractedDir = ray.direction * eta + adjustedNormal * (eta * cosI - cosT);
-                refractedColour = traceRayRecursive(scene, Ray(hitPoint - adjustedNormal * 0.0001f, refractedDir), bounce + 1);
+                refractedColour = material->diffuseColor * traceRayRecursive(scene, Ray(hitPoint - adjustedNormal * 0.0001f, refractedDir), bounce + 1);
+                // refractedColour = traceRayRecursive(scene, Ray(hitPoint - adjustedNormal * 0.0001f, refractedDir), bounce + 1);
             } else {
                 fresnelReflectance = 1.0f;  // Total internal reflection: fully reflective
             }
@@ -255,7 +268,17 @@ void PathTracer::renderScene(const Scene& scene, std::vector<Colour>& pixels) co
             Colour pixelColour = tracePixel(scene, x, y, photonMap);
 
             // Apply tone mapping to the final pixel before storage
-            pixelColour = linearToneMap(pixelColour, exposure);
+            //ACES
+            Vec3 hdrColor(pixelColour.r / 255.0f, pixelColour.g / 255.0f, pixelColour.b / 255.0f);
+
+            Vec3 acesTonemapped = ACESFittedToneMap(hdrColor, exposure);
+
+            // Convert Vec3 back to Colour (scaling to 0–255 range)
+            pixelColour = Colour(
+                static_cast<int>(acesTonemapped.x * 255.0f),
+                static_cast<int>(acesTonemapped.y * 255.0f),
+                static_cast<int>(acesTonemapped.z * 255.0f)
+            );
             pixels[y * camera->width + x] = pixelColour;
         }
     }
