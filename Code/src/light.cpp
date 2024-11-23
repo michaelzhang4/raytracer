@@ -19,8 +19,8 @@ float PointLight::pdf() const {
 }
 
 // Area Light Implementation
-AreaLight::AreaLight(const Vec3& position, const Colour& intensity, const Vec3& u, const Vec3& v, float width, float height)
-    : Light(position, intensity), u(u), v(v), width(width), height(height) {}
+AreaLight::AreaLight(const Vec3& position, const Colour& intensity, const Vec3& u, const Vec3& v, float width, float height, Colour radiance)
+    : Light(position, intensity), u(u), v(v), width(width), height(height), radiance(radiance){}
 
 Vec3 AreaLight::samplePoint() const {
     // Ensure tangent vectors u and v are orthogonal

@@ -100,34 +100,9 @@ void PhongTracer::renderScene(const Scene& scene, std::vector<Colour>& pixels) c
             // Apply tone mapping to the final pixel before storage
             pixelColour = linearToneMap(pixelColour, exposure);
 
-            // ACES
-            // Vec3 hdrColor(pixelColour.r / 255.0f, pixelColour.g / 255.0f, pixelColour.b / 255.0f);
-
-            // Vec3 acesTonemapped = ACESFittedToneMap(hdrColor, exposure);
-
-            // // Convert Vec3 back to Colour (scaling to 0–255 range)
-            // pixelColour = Colour(
-            //     static_cast<int>(acesTonemapped.x * 255.0f),
-            //     static_cast<int>(acesTonemapped.y * 255.0f),
-            //     static_cast<int>(acesTonemapped.z * 255.0f)
-            // );
-
             pixels[y * camera->width + x] = pixelColour;
         }
     }
-
-    // Gamma correction
-    // for (int y =0;y< camera.height;++y) {
-    //     for (int x=0;x<camera.width; ++x) {
-    //         pixels[y*camera.width + x] = gammaCorrect(pixels[y*camera.width + x]);
-    //     }
-    // }
-
-    // // histogram equalisation
-    // auto histogram = computeHistogram(pixels);
-    // auto cdf = computeCDF(histogram);
-    // applyHistogramEqualisation(pixels, exposure);
-
 }
 
 
@@ -325,7 +300,7 @@ void PathTracer::renderScene(const Scene& scene, std::vector<Colour>& pixels) co
 // Pixel sampling!
 Colour PathTracer::tracePixel(const Scene& scene, int x, int y, const PhotonMap& photonMap) const {
     std::shared_ptr<Camera> camera = scene.getCamera();
-    int samplesPerPixel = 8; // Number of samples per pixel
+    int samplesPerPixel = 30; // Number of samples per pixel
     Colour accumulatedColour(0, 0, 0);
 
 
@@ -590,7 +565,7 @@ Colour PathTracer::traceRayRecursive(const Scene& scene, const Ray& ray, int bou
     }
 
 
-    // // Adjust illumination of the scene (ambient lighting)
+    // Adjust illumination of the scene (ambient lighting)
     // Colour globalIllumination = textureDiffuseColor  * 0.25f;
     // colour = colour + globalIllumination;
 
@@ -647,16 +622,17 @@ Colour PathTracer::traceRayRecursive(const Scene& scene, const Ray& ray, int bou
         // --- Reflection ---
         if (material->isReflective) {
             int numSamples = 4;
-            float roughness = std::max(std::sqrt(2.0f / (material->specularExponent + 2.0f)),1.0f);
+            // Ensure that roughness is between 0.0f and 1.0f
+            float roughness = std::sqrt(2.0f / (material->specularExponent + 2.0f));
+            roughness = std::clamp(roughness, 0.0f, 1.0f);
+
 
             // Sample multiple directions for indirect light (brdf)
             for (int i = 0; i < numSamples; i++) {
                 // Sample the GGX halfway vector
                 Vec3 halfVector = BRDF::sampleGGX(adjustedNormal, roughness);
 
-                // Compute the reflected direction using the sampled halfway vector
                 Vec3 reflectedDir = ray.direction - adjustedNormal * 2.0f * ray.direction.dot(adjustedNormal);
-
 
                 // Trace the reflected ray
                 Colour sampleColour = traceRayRecursive(scene, Ray(hitPoint + adjustedNormal * 0.0001f, reflectedDir), bounce + 1, photonMap);
@@ -672,15 +648,16 @@ Colour PathTracer::traceRayRecursive(const Scene& scene, const Ray& ray, int bou
                     F0,                      // Fresnel reflectance at normal incidence
                     roughness                // Surface roughness
                 );
-                float D = BRDF::GGX_D(adjustedNormal, halfVector, roughness);
+
                 // Calculate the GGX PDF for the sampled direction
                 float pdf = BRDF::GGX_PDF(adjustedNormal, halfVector, roughness);
 
-                float weight = (D * adjustedNormal.dot(halfVector)) / std::max(pdf, 0.001f);
-                weight = std::min(weight, 1.0f); // Ensure the sum doesn't exceed 1
+                // Compute the weight
+                float NdotL = std::max(adjustedNormal.dot(reflectedDir), 0.0f);
+                Colour weight = (brdf * NdotL) / pdf;
 
                 // Weight the contribution using the BRDF and PDF
-                reflectedColour = reflectedColour + sampleColour *  weight + brdf;
+                reflectedColour = reflectedColour + sampleColour *  weight;
             }
 
             // Average the contributions over the number of samples
@@ -699,6 +676,10 @@ Colour PathTracer::traceRayRecursive(const Scene& scene, const Ray& ray, int bou
                 refractedDir.normalise();
 
                 refractedColour = traceRayRecursive(scene, Ray(hitPoint - adjustedNormal * 0.0001f, refractedDir), bounce + 1, photonMap);
+
+                // Multiply by material's transmittance (diffuse color)
+                Colour transmittance = material->diffuseColor / 255.0f;
+                refractedColour = refractedColour * transmittance;
 
                 // Schlick approximation
                 float r0 = (n1 - n2) / (n1 + n2);

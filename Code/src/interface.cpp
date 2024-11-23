@@ -26,14 +26,24 @@ void textInterface() {
         // Prepare the pixel buffer
         std::vector<Colour> pixels(width * height);
 
+
+        auto start = std::chrono::high_resolution_clock::now();
+
         // Render the scene
         scene.renderScene(pixels);
+
+
+        auto end = std::chrono::high_resolution_clock::now();
 
         // Save the result to a PPM file
         std::string filename = outputPath+input+".ppm";
         writePPM(filename, pixels, width, height);
 
         std::cout << "Rendered image saved to " << filename << std::endl;
+        
+        std::chrono::duration<double> elapsed = end - start;
+
+        std::cout << "Render time: " << elapsed.count() << " s" << std::endl;
 
     }
 }

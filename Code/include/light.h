@@ -37,9 +37,10 @@ class AreaLight : public Light {
 public:
     Vec3 u, v;          // Tangent vectors defining the light's plane
     float width, height; // Dimensions of the area light
+    Colour radiance;
 
     // Constructor
-    AreaLight(const Vec3& position, const Colour& intensity, const Vec3& u, const Vec3& v, float width, float height);
+    AreaLight(const Vec3& position, const Colour& intensity, const Vec3& u, const Vec3& v, float width, float height, Colour radiance);
     Vec3 getNormal() const;
     // Override base class methods
     Vec3 samplePoint() const override;

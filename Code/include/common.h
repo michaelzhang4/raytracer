@@ -12,6 +12,7 @@
 #include <limits>
 #include <filesystem>
 #include <random>
+#include <chrono>
 #include "utilities.h"
 
 #include "../external/nlohmann/json.hpp"

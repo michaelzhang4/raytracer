@@ -19,6 +19,6 @@ Pathtracer features (All fully working)
     - Multi-bounce path tracing: yes
     - An advanced feature of your choice (eg. Caustics, Volumetrics, fancy BRDFs, etc.): yes
 
-Exceptional raytracer features (All fully working)
+Exceptional raytracer features (Attempted)
     - Caustics
     - Fancy BRDFs (Cook-Torrance model)

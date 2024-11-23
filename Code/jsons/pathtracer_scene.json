@@ -17,14 +17,14 @@
             "backgroundcolor": [0.25, 0.25, 0.25], 
             "lightsources":[ 
                 { 
-                    "type":"pointlight", 
+                    "type":"arealight", 
                     "position":[0, 1.0, 0.5], 
-                    "intensity":[0.5, 0.5, 0.5] 
+                    "intensity":[0.75, 0.75, 0.75] 
                 },
                 { 
-                    "type":"pointlight", 
+                    "type":"arealight", 
                     "position":[0, 1.0, -0.5], 
-                    "intensity":[0.5, 0.5, 0.5] 
+                    "intensity":[0.75, 0.75, 0.75] 
                 }
             ], 
             "shapes":[ 

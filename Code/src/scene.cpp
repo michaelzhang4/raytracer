@@ -64,7 +64,8 @@ Scene::Scene(const json& jsonData) {
                 Vec3 v = getVec3FromJson(lightData, "v", {0, 1, 0});  // Default to y-axis
                 float width = lightData.value("width", 1.0f);
                 float height = lightData.value("height", 1.0f);
-                lights.emplace_back(std::make_shared<AreaLight>(position, intensity, u, v, width, height));
+                Colour radiance = getColourFromJson(lightData, "height",  Colour(255, 255, 255));
+                lights.emplace_back(std::make_shared<AreaLight>(position, intensity, u, v, width, height, radiance));
             } else {
                 std::cerr << "Unknown light type: " << type << std::endl;
             }
