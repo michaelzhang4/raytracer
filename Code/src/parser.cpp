@@ -1,7 +1,8 @@
 #include <iostream>
-#include <fstream>
 
+#include <fstream>
 #include "parser.h"
+#include "common.h"
 
 int parse(const std::string& filepath, json &jsonData) {
     std::ifstream file(filepath);   // Open file as read
@@ -55,9 +56,9 @@ Material parseMaterial(const json& materialData) {
     float reflectivity = materialData.value("reflectivity", 1.0f);
     bool isRefractive = materialData.value("isrefractive", false);
     float refractiveIndex = materialData.value("refractiveindex", 1.0f);
+    float roughness = materialData.value("roughness", 0.3f);
     std::string texturePath = materialData.value("texture", "");
-
-    return Material(kd, ks, specularExponent, diffuse, specular, isReflective, reflectivity, isRefractive, refractiveIndex, texturePath);
+    return Material(kd, ks, specularExponent, diffuse, specular, isReflective, reflectivity, isRefractive, refractiveIndex, roughness, texturePath);
 }
 
 void displayJsonData(const json &jsonData) {

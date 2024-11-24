@@ -14,6 +14,7 @@ struct Material {
     float reflectivity;  // Reflectivity percentage
     bool isRefractive;
     float refractiveIndex;
+    float roughness;
     std::shared_ptr<Texture> texture;
 
     // Default constructor
@@ -21,7 +22,7 @@ struct Material {
 
     // Parameterized constructor
     Material(float kd, float ks, int specularExponent, const Colour& diffuse, const Colour& specular, 
-             bool reflective, float reflectivity, bool refractive, float refrIndex, std::string texturePath);
+             bool reflective, float reflectivity, bool refractive, float refrIndex, float roughness, std::string texturePath);
     // Colour getDiffuseColor(Point2f uv) const;
     // Debugging utility
     void printMaterialInfo() const;

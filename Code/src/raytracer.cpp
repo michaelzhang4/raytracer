@@ -565,7 +565,7 @@ Colour PathTracer::traceRayRecursive(const Scene& scene, const Ray& ray, int bou
     }
 
 
-    // Adjust illumination of the scene (ambient lighting)
+    // // Adjust illumination of the scene (ambient lighting)
     // Colour globalIllumination = textureDiffuseColor  * 0.25f;
     // colour = colour + globalIllumination;
 
@@ -623,14 +623,13 @@ Colour PathTracer::traceRayRecursive(const Scene& scene, const Ray& ray, int bou
         if (material->isReflective) {
             int numSamples = 4;
             // Ensure that roughness is between 0.0f and 1.0f
-            float roughness = std::sqrt(2.0f / (material->specularExponent + 2.0f));
-            roughness = std::clamp(roughness, 0.0f, 1.0f);
-
+            float roughness = material->roughness;
+            // roughness = std::clamp(roughness, 0.0f, 1.0f);
 
             // Sample multiple directions for indirect light (brdf)
             for (int i = 0; i < numSamples; i++) {
                 // Sample the GGX halfway vector
-                Vec3 halfVector = BRDF::sampleGGX(adjustedNormal, roughness);
+                Vec3 halfVector = BRDF::sampleGGX(adjustedNormal, material->roughness);
 
                 Vec3 reflectedDir = ray.direction - adjustedNormal * 2.0f * ray.direction.dot(adjustedNormal);
 
